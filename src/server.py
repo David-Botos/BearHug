@@ -129,6 +129,7 @@ async def _create_dialin_daily_room(callId, callDomain=None):
     else:
         raise HTTPException(status_code=500, detail=f"❌ Failed to get room or room token")
     
+    # will need to change for production to be a vm so its scalable
     bot_proc = f"python3 -m bot -u {room.url} -t {token} -i {callId} -d {callDomain}"
     try:
         subprocess.Popen(

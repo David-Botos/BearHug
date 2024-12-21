@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from loguru import logger
 from runner import configure
 from prompt import generate_shelter_prompt, CommunityServices
-from analysis import store_transcript_async
+# from analysis import store_transcript_async
 
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.frames.frames import EndFrame, LLMMessagesFrame
@@ -109,6 +109,7 @@ async def main():
         pipeline = Pipeline([
             transport.input(),
             context_aggregator.user(),
+            # stt??
             llm,
             tts,
             transport.output(),
@@ -215,7 +216,7 @@ async def main():
             if state.extended_silence_timer:
                 state.extended_silence_timer.cancel()
             
-            await store_transcript_async(state.current_transcription)
+            # await store_transcript_async(state.current_transcription)
             await task.queue_frame(EndFrame())
 
         @transport.event_handler("on_call_state_updated")
@@ -227,7 +228,7 @@ async def main():
                 if state.extended_silence_timer:
                     state.extended_silence_timer.cancel()
                 
-                await store_transcript_async(state.current_transcription)
+                # await store_transcript_async(state.current_transcription)
                 await task.queue_frame(EndFrame())
 
         # Start the pipeline

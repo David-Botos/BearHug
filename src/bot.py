@@ -37,6 +37,38 @@ class CallState:
         self.extended_silence_timer: Optional[asyncio.Task] = None
         self.participant_id: Optional[str] = None
 
+def get_transcript_from_context(context) -> str:
+    """Extract the conversation transcript from the AnthropicLLMContext"""
+    transcript_lines = []
+    
+    # Access the messages directly from the context
+    for message in context.messages:
+        role = message["role"]
+        content = message["content"]
+        
+        # Skip system messages
+        if role == "system":
+            continue
+            
+        # Format the speaker label
+        speaker = "Bot" if role == "assistant" else "User"
+        
+        # Handle different content formats
+        if isinstance(content, str):
+            transcript_lines.append(f"{speaker}: {content}")
+        elif isinstance(content, list):
+            # Process each content block
+            for block in content:
+                if block["type"] == "text":
+                    transcript_lines.append(f"{speaker}: {block['text']}")
+                # Skip tool_use, tool_result, and image blocks from transcript
+    
+    return "\n".join(transcript_lines)
+
+async def send_final_transcript(transcript: str):
+    """Send final transcript to stdout for server to capture"""
+    print(f"TRANSCRIPT_UPDATE:{transcript}")
+
 async def main():
     ssl_context = ssl.create_default_context(cafile=certifi.where())
     connector = aiohttp.TCPConnector(ssl=ssl_context)
@@ -215,8 +247,10 @@ async def main():
             state.has_ended = True
             if state.extended_silence_timer:
                 state.extended_silence_timer.cancel()
-            
-            # await store_transcript_async(state.current_transcription)
+
+            transcript = get_transcript_from_context(context)
+            send_final_transcript(f"TRANSCRIPT_UPDATE:{transcript}")
+
             await task.queue_frame(EndFrame())
 
         @transport.event_handler("on_call_state_updated")
@@ -227,8 +261,10 @@ async def main():
                 state.has_ended = True
                 if state.extended_silence_timer:
                     state.extended_silence_timer.cancel()
-                
-                # await store_transcript_async(state.current_transcription)
+
+                transcript = get_transcript_from_context(context)
+                send_final_transcript(f"TRANSCRIPT_UPDATE:{transcript}")
+
                 await task.queue_frame(EndFrame())
 
         # Start the pipeline

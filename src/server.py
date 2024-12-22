@@ -40,6 +40,70 @@ daily_helpers: Dict[str, DailyRESTHelper] = {}
 # Load environment variables
 load_dotenv(override=True)
 
+def cleanup() -> None:
+    # Clean up function to terminate all bot processes
+    logger.info("🧹 Starting cleanup of bot processes")
+    for pid, (proc, room_url) in bot_procs.items():
+        try:
+            proc.terminate()
+            proc.wait(timeout=5)  # Wait up to 5 seconds for graceful termination
+            logger.info(f"✅ Successfully terminated bot {pid} in room {room_url}")
+        except subprocess.TimeoutExpired:
+            logger.warning(f"⚠️ Bot {pid} didn't terminate gracefully, forcing...")
+            proc.kill()
+        except Exception as e:
+            logger.error(f"❌ Error cleaning up bot {pid}: {e}")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Lifecycle manager for the FastAPI application
+    logger.info("🚀 Starting server...")
+    # Instantiate asyncronous http session
+    aiohttp_session = None
+    try:
+        # Create SSL context with verified certificates
+        SSL_CERT = certifi.where()
+        ssl_context = ssl.create_default_context(cafile=SSL_CERT)
+        conn = aiohttp.TCPConnector(ssl=ssl_context)
+        
+        # Create session with SSL context
+        aiohttp_session = aiohttp.ClientSession(connector=conn)
+        
+        daily_api_key = os.getenv("DAILY_API_KEY")
+        if not daily_api_key:
+            logger.warning("⚠️ DAILY_API_KEY not set!")
+            
+        daily_helpers["rest"] = DailyRESTHelper(
+            daily_api_key=daily_api_key,
+            daily_api_url=DAILY_API_URL,
+            aiohttp_session=aiohttp_session,
+        )
+        logger.info("✅ Server initialized successfully")
+        yield
+        
+    except Exception as e:
+        logger.error(f"❌ Error during server lifecycle: {e}")
+        raise
+    finally:
+        logger.info("🔄 Shutting down server...")
+        if aiohttp_session:
+            await aiohttp_session.close()
+        cleanup()
+        logger.info("✅ Server shutdown complete")
+
+
+# Initialize FastAPI app with lifespan manager
+app = FastAPI(lifespan=lifespan)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Store active processes and their communication queues, keyed by room_url
 process_manager = {
     "processes": {},  # type: Dict[str, asyncio.subprocess.Process]
@@ -47,6 +111,18 @@ process_manager = {
     "variables": {},  # type: Dict[str, dict]
     "call_ids": {}   # type: Dict[str, str] # Maps room_url to callId
 }
+
+# Dial-in Configuration
+params = DailyRoomParams(
+    properties=DailyRoomProperties(
+        sip=DailyRoomSipParams(
+            display_name="sip-dialin",
+            video = False,
+            sip_mode = "dial-in",
+            num_endpoints = 1
+        )
+    )
+)
 
 async def create_dialin_daily_room(callId: str, callDomain: Optional[str] = None):
     """Creates room and starts subprocess, but handles communication separately"""

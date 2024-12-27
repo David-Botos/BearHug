@@ -1,3 +1,5 @@
+// TODO: Enable ENUM types with GORM
+
 package hsds_types
 
 import (
@@ -6,154 +8,200 @@ import (
 
 // // -- HSDS Definitions -- ////
 type Organization struct {
-    // Foreign Key Relationships
-    ParentOrganizationID string `json:"parent_organization_id,omitempty" db:"parent_organization_id"`
-    
-    // Organization Data
-    ID              string `json:"id" validate:"required" db:"id"`
-    Name            string `json:"name" validate:"required" db:"name"`
-    AlternateName   string `json:"alternate_name,omitempty" db:"alternate_name"`
-    Description     string `json:"description" validate:"required" db:"description"`
-    Email           string `json:"email,omitempty" db:"email"`
-    LegalStatus     string `json:"legal_status,omitempty" db:"legal_status"`
-    Logo            string `json:"logo,omitempty" db:"logo"`
-    TaxID           string `json:"tax_id,omitempty" db:"tax_id"`
-    TaxStatus       string `json:"tax_status,omitempty" db:"tax_status"`
-    URI             string `json:"uri,omitempty" db:"uri"`
-    Website         string `json:"website,omitempty" db:"website"`
-    YearIncorporated int   `json:"year_incorporated,omitempty" db:"year_incorporated"`
+	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
+
+	// Foreign Key Relationships
+	ParentOrganizationID *string `json:"parent_organization_id,omitempty" gorm:"type:varchar(250);column:parent_organization_id"`
+
+	// Organization Data
+	ID               string  `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	Name             string  `json:"name" gorm:"type:text;not null" validate:"required"`
+	AlternateName    *string `json:"alternate_name,omitempty" gorm:"type:text"`
+	Description      string  `json:"description" gorm:"type:text;not null" validate:"required"`
+	Email            *string `json:"email,omitempty" gorm:"type:text"`
+	LegalStatus      *string `json:"legal_status,omitempty" gorm:"type:text"`
+	Logo             *string `json:"logo,omitempty" gorm:"type:text"`
+	TaxID            *string `json:"tax_id,omitempty" gorm:"type:text;column:tax_id"`
+	TaxStatus        *string `json:"tax_status,omitempty" gorm:"type:text"`
+	URI              *string `json:"uri,omitempty" gorm:"type:text"`
+	Website          *string `json:"website,omitempty" gorm:"type:text"`
+	YearIncorporated *int    `json:"year_incorporated,omitempty" gorm:"type:numeric"`
 }
 
 type OrganizationIdentifier struct {
-    //Foreign Key Relationships
-    OrganizationID string `json:"organization_id" validate:"required" db:"organization_id"`
-    //OrganizationIdentifier Data
-    ID               string `json:"id" validate:"required" db:"id"`
-    IdentifierScheme string `json:"identifier_scheme,omitempty" db:"identifier_scheme"`
-    IdentifierType   string `json:"identifier_type" validate:"required" db:"identifier_type"`
-    Identifier       string `json:"identifier" validate:"required" db:"identifier"`
+	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
+
+	// Foreign Key Relationships
+	OrganizationID string       `json:"organization_id" gorm:"type:varchar(250);not null;foreignKey:OrganizationID;references:ID" validate:"required"`
+	Organization   Organization `gorm:"foreignKey:OrganizationID;references:ID" json:"-"`
+
+	// OrganizationIdentifier Data
+	ID               string  `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	IdentifierScheme *string `json:"identifier_scheme,omitempty" gorm:"type:text"`
+	IdentifierType   string  `json:"identifier_type" gorm:"type:text;not null" validate:"required"`
+	Identifier       string  `json:"identifier" gorm:"type:text;not null" validate:"required"`
 }
 
 type URL struct {
+	// Base fields for GORM
+	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
+
 	// Foreign Key Relationships
-	OrganizationID string `json:"organization_id,omitempty" db:"organization_id"`
-	ServiceID      string `json:"service_id,omitempty" db:"service_id"`
+	OrganizationID *string      `json:"organization_id,omitempty" gorm:"type:varchar(250);foreignKey:OrganizationID;references:ID"`
+	Organization   Organization `gorm:"foreignKey:OrganizationID;references:ID" json:"-"`
+	ServiceID      *string      `json:"service_id,omitempty" gorm:"type:varchar(250);foreignKey:ServiceID;references:ID"`
+	Service        Service      `gorm:"foreignKey:ServiceID;references:ID" json:"-"`
+
 	// URL Data
-	ID    string `json:"id" validate:"required" db:"id"`
-	Label string `json:"label,omitempty" db:"label"`
-	URL   string `json:"url" validate:"required" db:"url"`
+	ID    string  `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	Label *string `json:"label,omitempty" gorm:"type:text"`
+	URL   string  `json:"url" gorm:"type:text;not null" validate:"required"`
 }
 
 type Funding struct {
-	// Foreign Key Relationships
-	OrganizationID string `json:"organization_id,omitempty" db:"organization_id"`
-	ServiceID      string `json:"service_id,omitempty" db:"service_id"`
+	// Base fields for GORM
+	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
 
-	//Funding Data
-	ID     string `json:"id" validate:"required" db:"id"`
-	Source string `json:"source,omitempty" db:"source"`
+	// Foreign Key Relationships
+	OrganizationID *string      `json:"organization_id,omitempty" gorm:"type:varchar(250);foreignKey:OrganizationID;references:ID"`
+	Organization   Organization `gorm:"foreignKey:OrganizationID;references:ID" json:"-"`
+	ServiceID      *string      `json:"service_id,omitempty" gorm:"type:varchar(250);foreignKey:ServiceID;references:ID"`
+	Service        Service      `gorm:"foreignKey:ServiceID;references:ID" json:"-"`
+
+	// Funding Data
+	ID     string  `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	Source *string `json:"source,omitempty" gorm:"type:text"`
 }
 
 type Unit struct {
-    ID         string `json:"id" validate:"required" db:"id"`
-    Name       string `json:"name" validate:"required" db:"name"`
-    Scheme     string `json:"scheme,omitempty" db:"scheme"`
-    Identifier string `json:"identifier,omitempty" db:"identifier"`
-    URI        string `json:"uri,omitempty" db:"uri"`
+	// Base fields for GORM
+	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
+
+	// Unit Data
+	ID         string  `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	Name       string  `json:"name" gorm:"type:text;not null" validate:"required"`
+	Scheme     *string `json:"scheme,omitempty" gorm:"type:text"`
+	Identifier *string `json:"identifier,omitempty" gorm:"type:text"`
+	URI        *string `json:"uri,omitempty" gorm:"type:text"`
 }
 
 type Program struct {
+	// Base fields for GORM
+	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
+
 	// Foreign Key Relationships
-	OrganizationID string `json:"organization_id" validate:"required" db:"organization_id"`
+	OrganizationID string       `json:"organization_id" gorm:"type:varchar(250);not null;uniqueIndex;foreignKey:OrganizationID;references:ID" validate:"required"`
+	Organization   Organization `gorm:"foreignKey:OrganizationID;references:ID" json:"-"`
+
 	// Program Data
-	ID            string `json:"id" validate:"required" db:"id"`
-	Name          string `json:"name" validate:"required" db:"name"`
-	AlternateName string `json:"alternate_name,omitempty" db:"alternate_name"`
-	Description   string `json:"description" validate:"required" db:"description"`
+	ID            string  `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	Name          string  `json:"name" gorm:"type:text;not null" validate:"required"`
+	AlternateName *string `json:"alternate_name,omitempty" gorm:"type:text"`
+	Description   string  `json:"description" gorm:"type:text;not null" validate:"required"`
 }
 
 type Service struct {
-    // Foreign Key Relationships
-    OrganizationID string `json:"organization_id" validate:"required" db:"organization_id"`
-    ProgramID string `json:"program_id,omitempty" db:"program_id"`
-    // Service Data
-    ID string `json:"id" validate:"required" db:"id"`
-    Name string `json:"name" validate:"required" db:"name"`
-    AlternateName string `json:"alternate_name,omitempty" db:"alternate_name"`
-    Description string `json:"description,omitempty" db:"description"`
-    URL string `json:"url,omitempty" db:"url"`
-    Email string `json:"email,omitempty" db:"email"`
-    Status ServiceStatusEnum `json:"status" validate:"required" db:"status"`
-    InterpretationServices string `json:"interpretation_services,omitempty" db:"interpretation_services"`
-    ApplicationProcess string `json:"application_process,omitempty" db:"application_process"`
-    FeesDescription string `json:"fees_description,omitempty" db:"fees_description"`
-    WaitTime string `json:"wait_time,omitempty" db:"wait_time"` // Deprecated
-    Fees string `json:"fees,omitempty" db:"fees"` // Deprecated
-    Accreditations string `json:"accreditations,omitempty" db:"accreditations"`
-    EligibilityDescription string `json:"eligibility_description,omitempty" db:"eligibility_description"`
-    MinimumAge float64 `json:"minimum_age,omitempty" db:"minimum_age"`
-    MaximumAge float64 `json:"maximum_age,omitempty" db:"maximum_age"`
-    AssuredDate time.Time `json:"assured_date,omitempty" db:"assured_date"`
-    AssurerEmail string `json:"assurer_email,omitempty" db:"assurer_email"`
-    Licenses string `json:"licenses,omitempty" db:"licenses"` // Deprecated
-    Alert string `json:"alert,omitempty" db:"alert"`
-    LastModified time.Time `json:"last_modified,omitempty" db:"last_modified"`
+	// Base fields for GORM
+	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
+
+	// Foreign Key Relationships
+	OrganizationID string       `json:"organization_id" gorm:"type:varchar(250);not null;foreignKey:OrganizationID;references:ID" validate:"required"`
+	Organization   Organization `gorm:"foreignKey:OrganizationID;references:ID" json:"-"`
+	ProgramID      *string      `json:"program_id,omitempty" gorm:"type:varchar(250);foreignKey:ProgramID;references:ID"`
+	Program        Program      `gorm:"foreignKey:ProgramID;references:ID" json:"-"`
+
+	// Service Data
+	ID                     string            `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	Name                   string            `json:"name" gorm:"type:text;not null" validate:"required"`
+	AlternateName          *string           `json:"alternate_name,omitempty" gorm:"type:text"`
+	Description            *string           `json:"description,omitempty" gorm:"type:text"`
+	URL                    *string           `json:"url,omitempty" gorm:"type:text"`
+	Email                  *string           `json:"email,omitempty" gorm:"type:text"`
+	Status                 ServiceStatusEnum `json:"status" gorm:"type:service_status_enum;not null" validate:"required"`
+	InterpretationServices *string           `json:"interpretation_services,omitempty" gorm:"type:text"`
+	ApplicationProcess     *string           `json:"application_process,omitempty" gorm:"type:text"`
+	FeesDescription        *string           `json:"fees_description,omitempty" gorm:"type:text"`
+	WaitTime               *string           `json:"wait_time,omitempty" gorm:"type:text"` // Deprecated
+	Fees                   *string           `json:"fees,omitempty" gorm:"type:text"`      // Deprecated
+	Accreditations         *string           `json:"accreditations,omitempty" gorm:"type:text"`
+	EligibilityDescription *string           `json:"eligibility_description,omitempty" gorm:"type:text"`
+	MinimumAge             *float64          `json:"minimum_age,omitempty" gorm:"type:numeric"`
+	MaximumAge             *float64          `json:"maximum_age,omitempty" gorm:"type:numeric"`
+	AssuredDate            *time.Time        `json:"assured_date,omitempty" gorm:"type:date"`
+	AssurerEmail           *string           `json:"assurer_email,omitempty" gorm:"type:text"`
+	Licenses               *string           `json:"licenses,omitempty" gorm:"type:text"` // Deprecated
+	Alert                  *string           `json:"alert,omitempty" gorm:"type:text"`
+	LastModified           *time.Time        `json:"last_modified,omitempty" gorm:"type:timestamp without time zone"`
 }
 
 type ServiceArea struct {
+    // Base fields for GORM
+    CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
+    UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
+
     // Foreign Key Relationships
-    ServiceID string `json:"service_id,omitempty" db:"service_id"`
-    ServiceAtLocationID string `json:"service_at_location_id,omitempty" db:"service_at_location_id"`
+    ServiceID            *string            `json:"service_id,omitempty" gorm:"type:varchar(250);foreignKey:ServiceID;references:ID"`
+    Service             Service            `gorm:"foreignKey:ServiceID;references:ID" json:"-"`
+    ServiceAtLocationID *string            `json:"service_at_location_id,omitempty" gorm:"type:varchar(250);foreignKey:ServiceAtLocationID;references:ID"`
+    ServiceAtLocation   ServiceAtLocation  `gorm:"foreignKey:ServiceAtLocationID;references:ID" json:"-"`
+
     // Service Area Data
-    ID string `json:"id" validate:"required" db:"id"`
-    Name string `json:"name,omitempty" db:"name"`
-    Description string `json:"description,omitempty" db:"description"`
-    Extent string `json:"extent,omitempty" db:"extent"`
-    ExtentType ExtentTypeEnum `json:"extent_type,omitempty" db:"extent_type"`
-    URI string `json:"uri,omitempty" db:"uri"`
+    ID          string         `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+    Name        *string        `json:"name,omitempty" gorm:"type:text"`
+    Description *string        `json:"description,omitempty" gorm:"type:text"`
+    Extent      *string        `json:"extent,omitempty" gorm:"type:text"`
+    ExtentType  *ExtentTypeEnum `json:"extent_type,omitempty" gorm:"type:text"`
+    URI         *string        `json:"uri,omitempty" gorm:"type:text"`
 }
 
 type ServiceAtLocation struct {
-    // Foreign Key Relationships
-    ServiceID string `json:"service_id" validate:"required" db:"service_id"`
-    LocationID string `json:"location_id" validate:"required" db:"location_id"`
-    // ServiceAtLocation Data
-    ID string `json:"id" validate:"required" db:"id"`
-    Description string `json:"description,omitempty" db:"description"`
+	// Foreign Key Relationships
+	ServiceID  string `json:"service_id" validate:"required" db:"service_id"`
+	LocationID string `json:"location_id" validate:"required" db:"location_id"`
+	// ServiceAtLocation Data
+	ID          string `json:"id" validate:"required" db:"id"`
+	Description string `json:"description,omitempty" db:"description"`
 }
 
 type Location struct {
-    // Foreign Key Relationships
-    OrganizationID string `json:"organization_id,omitempty" db:"organization_id"`
-    // Location Data
-    ID string `json:"id" validate:"required" db:"id"`
-    LocationType LocationLocationTypeEnum `json:"location_type" validate:"required" db:"location_type"`
-    URL string `json:"url,omitempty" db:"url"`
-    Name string `json:"name,omitempty" db:"name"`
-    AlternateName string `json:"alternate_name,omitempty" db:"alternate_name"`
-    Description string `json:"description,omitempty" db:"description"`
-    Transportation string `json:"transportation,omitempty" db:"transportation"`
-    Latitude float64 `json:"latitude,omitempty" db:"latitude"`
-    Longitude float64 `json:"longitude,omitempty" db:"longitude"`
-    ExternalIdentifier string `json:"external_identifier,omitempty" db:"external_identifier"`
-    ExternalIdentifierType string `json:"external_identifier_type,omitempty" db:"external_identifier_type"`
+	// Foreign Key Relationships
+	OrganizationID string `json:"organization_id,omitempty" db:"organization_id"`
+	// Location Data
+	ID                     string                   `json:"id" validate:"required" db:"id"`
+	LocationType           LocationLocationTypeEnum `json:"location_type" validate:"required" db:"location_type"`
+	URL                    string                   `json:"url,omitempty" db:"url"`
+	Name                   string                   `json:"name,omitempty" db:"name"`
+	AlternateName          string                   `json:"alternate_name,omitempty" db:"alternate_name"`
+	Description            string                   `json:"description,omitempty" db:"description"`
+	Transportation         string                   `json:"transportation,omitempty" db:"transportation"`
+	Latitude               float64                  `json:"latitude,omitempty" db:"latitude"`
+	Longitude              float64                  `json:"longitude,omitempty" db:"longitude"`
+	ExternalIdentifier     string                   `json:"external_identifier,omitempty" db:"external_identifier"`
+	ExternalIdentifierType string                   `json:"external_identifier_type,omitempty" db:"external_identifier_type"`
 }
 
 type Address struct {
-    // Foreign Key Relationships
-    LocationID string `json:"location_id,omitempty" db:"location_id"`
+	// Foreign Key Relationships
+	LocationID string `json:"location_id,omitempty" db:"location_id"`
 
-    // Address Data
-    ID            string                   `json:"id" validate:"required" db:"id"`
-    Attention     string                   `json:"attention,omitempty" db:"attention"`
-    Address1      string                   `json:"address_1" validate:"required" db:"address_1"`
-    Address2      string                   `json:"address_2,omitempty" db:"address_2"`
-    City          string                   `json:"city" validate:"required" db:"city"`
-    Region        string                   `json:"region,omitempty" db:"region"`
-    StateProvince string                   `json:"state_province" validate:"required" db:"state_province"`
-    PostalCode    string                   `json:"postal_code" validate:"required" db:"postal_code"`
-    Country       string                   `json:"country" validate:"required,len=2" db:"country"`
-    AddressType   LocationLocationTypeEnum `json:"address_type" validate:"required,oneof=physical postal virtual" db:"address_type"`
+	// Address Data
+	ID            string                   `json:"id" validate:"required" db:"id"`
+	Attention     string                   `json:"attention,omitempty" db:"attention"`
+	Address1      string                   `json:"address_1" validate:"required" db:"address_1"`
+	Address2      string                   `json:"address_2,omitempty" db:"address_2"`
+	City          string                   `json:"city" validate:"required" db:"city"`
+	Region        string                   `json:"region,omitempty" db:"region"`
+	StateProvince string                   `json:"state_province" validate:"required" db:"state_province"`
+	PostalCode    string                   `json:"postal_code" validate:"required" db:"postal_code"`
+	Country       string                   `json:"country" validate:"required,len=2" db:"country"`
+	AddressType   LocationLocationTypeEnum `json:"address_type" validate:"required,oneof=physical postal virtual" db:"address_type"`
 }
 
 type RequiredDocument struct {
@@ -168,29 +216,29 @@ type RequiredDocument struct {
 }
 
 type Language struct {
-    // Foreign Key Relationships
-    ServiceID  string `json:"service_id,omitempty" db:"service_id"`
-    LocationID string `json:"location_id,omitempty" db:"location_id"`
-    PhoneID    string `json:"phone_id,omitempty" db:"phone_id"`
+	// Foreign Key Relationships
+	ServiceID  string `json:"service_id,omitempty" db:"service_id"`
+	LocationID string `json:"location_id,omitempty" db:"location_id"`
+	PhoneID    string `json:"phone_id,omitempty" db:"phone_id"`
 
-    // Language Data
-    ID        string    `json:"id" validate:"required" db:"id"`
-    Name      string    `json:"name,omitempty" db:"name"`
-    Code      string    `json:"code,omitempty" db:"code"`
-    Note      string    `json:"note,omitempty" db:"note"`
-    CreatedAt time.Time `json:"created_at" db:"created_at"`
-    UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+	// Language Data
+	ID        string    `json:"id" validate:"required" db:"id"`
+	Name      string    `json:"name,omitempty" db:"name"`
+	Code      string    `json:"code,omitempty" db:"code"`
+	Note      string    `json:"note,omitempty" db:"note"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
 type Accessibility struct {
-    // Foreign Key Relationship
-    LocationID string `json:"location_id,omitempty" db:"location_id"`
+	// Foreign Key Relationship
+	LocationID string `json:"location_id,omitempty" db:"location_id"`
 
-    // Accessibility Data
-    ID          string `json:"id" validate:"required" db:"id"`
-    Description string `json:"description,omitempty" db:"description"`
-    Details     string `json:"details,omitempty" db:"details"`
-    URL         string `json:"url,omitempty" db:"url"`
+	// Accessibility Data
+	ID          string `json:"id" validate:"required" db:"id"`
+	Description string `json:"description,omitempty" db:"description"`
+	Details     string `json:"details,omitempty" db:"details"`
+	URL         string `json:"url,omitempty" db:"url"`
 }
 
 type Attribute struct {
@@ -208,26 +256,26 @@ type Attribute struct {
 }
 
 type Taxonomy struct {
-    ID          string `json:"id" validate:"required" db:"id"`
-    Name        string `json:"name" validate:"required" db:"name"`
-    Description string `json:"description" validate:"required" db:"description"`
-    URI         string `json:"uri,omitempty" db:"uri"`
-    Version     string `json:"version,omitempty" db:"version"`
+	ID          string `json:"id" validate:"required" db:"id"`
+	Name        string `json:"name" validate:"required" db:"name"`
+	Description string `json:"description" validate:"required" db:"description"`
+	URI         string `json:"uri,omitempty" db:"uri"`
+	Version     string `json:"version,omitempty" db:"version"`
 }
 
 type TaxonomyTerm struct {
-    // Foreign Key Relationship
-    TaxonomyID string `json:"taxonomy_id,omitempty" db:"taxonomy_id"`
-    ParentID   string `json:"parent_id,omitempty" db:"parent_id"`
+	// Foreign Key Relationship
+	TaxonomyID string `json:"taxonomy_id,omitempty" db:"taxonomy_id"`
+	ParentID   string `json:"parent_id,omitempty" db:"parent_id"`
 
-    // TaxonomyTerm Data
-    ID          string `json:"id" validate:"required" db:"id"`
-    Code        string `json:"code,omitempty" db:"code"`
-    Name        string `json:"name" validate:"required" db:"name"`
-    Description string `json:"description" validate:"required" db:"description"`
-    Taxonomy    string `json:"taxonomy,omitempty" db:"taxonomy"`
-    Language    string `json:"language,omitempty" db:"language"`
-    TermURI     string `json:"term_uri,omitempty" db:"term_uri"`
+	// TaxonomyTerm Data
+	ID          string `json:"id" validate:"required" db:"id"`
+	Code        string `json:"code,omitempty" db:"code"`
+	Name        string `json:"name" validate:"required" db:"name"`
+	Description string `json:"description" validate:"required" db:"description"`
+	Taxonomy    string `json:"taxonomy,omitempty" db:"taxonomy"`
+	Language    string `json:"language,omitempty" db:"language"`
+	TermURI     string `json:"term_uri,omitempty" db:"term_uri"`
 }
 
 type Contact struct {
@@ -247,48 +295,48 @@ type Contact struct {
 }
 
 type Phone struct {
-    //Foreign Key Relationships
-    LocationID           string  `json:"location_id,omitempty" db:"location_id"`
-    ServiceID           string  `json:"service_id,omitempty" db:"service_id"`
-    OrganizationID      string  `json:"organization_id,omitempty" db:"organization_id"`
-    ContactID           string  `json:"contact_id,omitempty" db:"contact_id"`
-    ServiceAtLocationID string  `json:"service_at_location_id,omitempty" db:"service_at_location_id"`
+	//Foreign Key Relationships
+	LocationID          string `json:"location_id,omitempty" db:"location_id"`
+	ServiceID           string `json:"service_id,omitempty" db:"service_id"`
+	OrganizationID      string `json:"organization_id,omitempty" db:"organization_id"`
+	ContactID           string `json:"contact_id,omitempty" db:"contact_id"`
+	ServiceAtLocationID string `json:"service_at_location_id,omitempty" db:"service_at_location_id"`
 
-    //Phone Data
-    ID          string   `json:"id" validate:"required" db:"id"`
-    Number      string   `json:"number" validate:"required" db:"number"`
-    Extension   float64  `json:"extension,omitempty" db:"extension"`
-    Type        string   `json:"type,omitempty" db:"type"`
-    Description string   `json:"description,omitempty" db:"description"`
+	//Phone Data
+	ID          string  `json:"id" validate:"required" db:"id"`
+	Number      string  `json:"number" validate:"required" db:"number"`
+	Extension   float64 `json:"extension,omitempty" db:"extension"`
+	Type        string  `json:"type,omitempty" db:"type"`
+	Description string  `json:"description,omitempty" db:"description"`
 }
 
 type Schedule struct {
-    // Foreign Key Relationship
-    ServiceID           string           `json:"service_id,omitempty" db:"service_id"`
-    LocationID          string           `json:"location_id,omitempty" db:"location_id"`
-    ServiceAtLocationID string           `json:"service_at_location_id,omitempty" db:"service_at_location_id"`
+	// Foreign Key Relationship
+	ServiceID           string `json:"service_id,omitempty" db:"service_id"`
+	LocationID          string `json:"location_id,omitempty" db:"location_id"`
+	ServiceAtLocationID string `json:"service_at_location_id,omitempty" db:"service_at_location_id"`
 
-    // Schedule Data
-    ID            string           `json:"id" validate:"required" db:"id"`
-    ValidFrom     time.Time        `json:"valid_from,omitempty" db:"valid_from"`
-    ValidTo       time.Time        `json:"valid_to,omitempty" db:"valid_to"`
-    DTStart       time.Time        `json:"dtstart,omitempty" db:"dtstart"`
-    Timezone      float64          `json:"timezone,omitempty" db:"timezone"`
-    Until         time.Time        `json:"until,omitempty" db:"until"`
-    Count         int              `json:"count,omitempty" db:"count"`
-    Wkst          ScheduleWkstEnum `json:"wkst,omitempty" db:"wkst"`
-    Freq          ScheduleFreqEnum `json:"freq,omitempty" db:"freq"`
-    Interval      int              `json:"interval,omitempty" db:"interval"`
-    Byday         string           `json:"byday,omitempty" db:"byday"`
-    Byweekno      string           `json:"byweekno,omitempty" db:"byweekno"`
-    Bymonthday    string           `json:"bymonthday,omitempty" db:"bymonthday"`
-    Byyearday     string           `json:"byyearday,omitempty" db:"byyearday"`
-    Description   string           `json:"description,omitempty" db:"description"`
-    OpensAt       time.Time        `json:"opens_at,omitempty" db:"opens_at"`
-    ClosesAt      time.Time        `json:"closes_at,omitempty" db:"closes_at"`
-    ScheduleLink  string           `json:"schedule_link,omitempty" db:"schedule_link"`
-    AttendingType string           `json:"attending_type,omitempty" db:"attending_type"`
-    Notes         string           `json:"notes,omitempty" db:"notes"`
+	// Schedule Data
+	ID            string           `json:"id" validate:"required" db:"id"`
+	ValidFrom     time.Time        `json:"valid_from,omitempty" db:"valid_from"`
+	ValidTo       time.Time        `json:"valid_to,omitempty" db:"valid_to"`
+	DTStart       time.Time        `json:"dtstart,omitempty" db:"dtstart"`
+	Timezone      float64          `json:"timezone,omitempty" db:"timezone"`
+	Until         time.Time        `json:"until,omitempty" db:"until"`
+	Count         int              `json:"count,omitempty" db:"count"`
+	Wkst          ScheduleWkstEnum `json:"wkst,omitempty" db:"wkst"`
+	Freq          ScheduleFreqEnum `json:"freq,omitempty" db:"freq"`
+	Interval      int              `json:"interval,omitempty" db:"interval"`
+	Byday         string           `json:"byday,omitempty" db:"byday"`
+	Byweekno      string           `json:"byweekno,omitempty" db:"byweekno"`
+	Bymonthday    string           `json:"bymonthday,omitempty" db:"bymonthday"`
+	Byyearday     string           `json:"byyearday,omitempty" db:"byyearday"`
+	Description   string           `json:"description,omitempty" db:"description"`
+	OpensAt       time.Time        `json:"opens_at,omitempty" db:"opens_at"`
+	ClosesAt      time.Time        `json:"closes_at,omitempty" db:"closes_at"`
+	ScheduleLink  string           `json:"schedule_link,omitempty" db:"schedule_link"`
+	AttendingType string           `json:"attending_type,omitempty" db:"attending_type"`
+	Notes         string           `json:"notes,omitempty" db:"notes"`
 }
 
 type ServiceCapacity struct {
@@ -304,17 +352,17 @@ type ServiceCapacity struct {
 }
 
 type CostOption struct {
-    // Foreign Key Relationships
-    ServiceID string `json:"service_id" validate:"required" db:"service_id"`
+	// Foreign Key Relationships
+	ServiceID string `json:"service_id" validate:"required" db:"service_id"`
 
-    // CostOption Data
-    ID                string    `json:"id" validate:"required" db:"id"`
-    ValidFrom         time.Time `json:"valid_from,omitempty" db:"valid_from"`
-    ValidTo           time.Time `json:"valid_to,omitempty" db:"valid_to"`
-    Option            string    `json:"option,omitempty" db:"option"`
-    Currency          string    `json:"currency,omitempty" db:"currency"`
-    Amount            float64   `json:"amount,omitempty" db:"amount"`
-    AmountDescription string    `json:"amount_description,omitempty" db:"amount_description"`
+	// CostOption Data
+	ID                string    `json:"id" validate:"required" db:"id"`
+	ValidFrom         time.Time `json:"valid_from,omitempty" db:"valid_from"`
+	ValidTo           time.Time `json:"valid_to,omitempty" db:"valid_to"`
+	Option            string    `json:"option,omitempty" db:"option"`
+	Currency          string    `json:"currency,omitempty" db:"currency"`
+	Amount            float64   `json:"amount,omitempty" db:"amount"`
+	AmountDescription string    `json:"amount_description,omitempty" db:"amount_description"`
 }
 
 type Metadata struct {
@@ -332,11 +380,12 @@ type Metadata struct {
 }
 
 type MetaTableDescription struct {
-    ID           string `json:"id" validate:"required" db:"id"`
-    Name         string `json:"name,omitempty" db:"name"`
-    Language     string `json:"language,omitempty" db:"language"`
-    CharacterSet string `json:"character_set,omitempty" db:"character_set"`
+	ID           string `json:"id" validate:"required" db:"id"`
+	Name         string `json:"name,omitempty" db:"name"`
+	Language     string `json:"language,omitempty" db:"language"`
+	CharacterSet string `json:"character_set,omitempty" db:"character_set"`
 }
+
 //// -- Enum Utilities -- ////
 
 // Enums contains all enum definitions

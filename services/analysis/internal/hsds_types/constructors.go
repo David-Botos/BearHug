@@ -1,3 +1,8 @@
+// TODO: uuidv4 for ids
+// TODO: check to make sure date time is created to the correct iCal schema
+// TODO: break into its own package
+// TODO: fork openreferral/specification and write a PR
+
 package hsds_types
 
 import (

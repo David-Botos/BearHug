@@ -1,553 +1,482 @@
-// TODO: uuidv4 for ids
-// TODO: check to make sure date time is created to the correct iCal schema
-// TODO: break into its own package
-// TODO: fork openreferral/specification and write a PR
-
+// Correct the enum usage
 package hsds_types
 
 import (
-	"errors"
+	"fmt"
 	"time"
+
+	"github.com/google/uuid"
 )
 
-// Organization Constructor
+// validateUUID ensures the string is a valid UUIDv4
+func validateUUID(u string) bool {
+	id, err := uuid.Parse(u)
+	if err != nil {
+		return false
+	}
+	// Verify it's a v4 UUID
+	return id.Version() == 4
+}
 
-type OrganizationOption func(*Organization)
+// newUUIDV4 generates a new UUIDv4 string
+func newUUIDV4() string {
+	return uuid.New().String()
+}
 
-func NewOrganization(id, name, description string, opts ...OrganizationOption) (*Organization, error) {
-	if id == "" || name == "" || description == "" {
-		return nil, errors.New("id, name, and description are required fields")
+// getICalTime returns a time.Time formatted according to iCal specs (RFC5545)
+// iCal format example: 20240328T150000Z
+func getICalTime() time.Time {
+	return time.Now().UTC().Round(time.Second)
+}
+
+// OrganizationOptions contains all the optional fields for creating an Organization
+type OrganizationOptions struct {
+	ParentOrganizationID *string
+	AlternateName        *string
+	Email                *string
+	LegalStatus          *string
+	Logo                 *string
+	TaxID                *string
+	TaxStatus            *string
+	URI                  *string
+	Website              *string
+	YearIncorporated     *int
+}
+
+// NewOrganization creates a new Organization with required fields and optional fields via OrganizationOptions
+func NewOrganization(name, description string, opts *OrganizationOptions) (*Organization, error) {
+	now := getICalTime()
+	id := newUUIDV4()
+
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
 	org := &Organization{
+		CreatedAt:   now,
+		UpdatedAt:   now,
 		ID:          id,
 		Name:        name,
 		Description: description,
 	}
 
-	for _, opt := range opts {
-		opt(org)
+	if opts != nil {
+		if opts.ParentOrganizationID != nil && !validateUUID(*opts.ParentOrganizationID) {
+			return nil, fmt.Errorf("invalid parent organization ID format: must be UUIDv4")
+		}
+		org.ParentOrganizationID = opts.ParentOrganizationID
+		org.AlternateName = opts.AlternateName
+		org.Email = opts.Email
+		org.LegalStatus = opts.LegalStatus
+		org.Logo = opts.Logo
+		org.TaxID = opts.TaxID
+		org.TaxStatus = opts.TaxStatus
+		org.URI = opts.URI
+		org.Website = opts.Website
+		org.YearIncorporated = opts.YearIncorporated
 	}
 
 	return org, nil
 }
 
-func FK_ParentOrganizationID(parentID string) OrganizationOption {
-	return func(o *Organization) {
-		o.ParentOrganizationID = parentID
-	}
+// OrganizationIdentifierOptions contains optional fields for creating an OrganizationIdentifier
+type OrganizationIdentifierOptions struct {
+	IdentifierScheme *string
 }
 
-func WithAlternateName(name string) OrganizationOption {
-	return func(o *Organization) {
-		o.AlternateName = name
+// NewOrganizationIdentifier creates a new OrganizationIdentifier with required fields and optional fields
+func NewOrganizationIdentifier(organizationID, identifierType, identifier string, opts *OrganizationIdentifierOptions) (*OrganizationIdentifier, error) {
+	if !validateUUID(organizationID) {
+		return nil, fmt.Errorf("invalid organization ID format: must be UUIDv4")
 	}
-}
 
-func WithEmail(email string) OrganizationOption {
-	return func(o *Organization) {
-		o.Email = email
-	}
-}
+	now := getICalTime()
+	id := newUUIDV4()
 
-func WithLegalStatus(status string) OrganizationOption {
-	return func(o *Organization) {
-		o.LegalStatus = status
-	}
-}
-
-func WithLogo(logo string) OrganizationOption {
-	return func(o *Organization) {
-		o.Logo = logo
-	}
-}
-
-func FK_TaxInfo(taxID, taxStatus string) OrganizationOption {
-	return func(o *Organization) {
-		o.TaxID = taxID
-		o.TaxStatus = taxStatus
-	}
-}
-
-func WithURI(uri string) OrganizationOption {
-	return func(o *Organization) {
-		o.URI = uri
-	}
-}
-
-func WithWebsite(website string) OrganizationOption {
-	return func(o *Organization) {
-		o.Website = website
-	}
-}
-
-func WithYearIncorporated(year int) OrganizationOption {
-	return func(o *Organization) {
-		o.YearIncorporated = year
-	}
-}
-
-// Organization Identifier Constructor
-
-type OrganizationIdentifierOption func(*OrganizationIdentifier)
-
-func NewOrganizationIdentifier(id, organizationID, identifierType, identifier string, opts ...OrganizationIdentifierOption) (*OrganizationIdentifier, error) {
-	if id == "" || organizationID == "" || identifierType == "" || identifier == "" {
-		return nil, errors.New("id, organization_id, identifier_type, and identifier are required fields")
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
 	orgIdentifier := &OrganizationIdentifier{
+		CreatedAt:      now,
+		UpdatedAt:      now,
 		ID:             id,
 		OrganizationID: organizationID,
 		IdentifierType: identifierType,
 		Identifier:     identifier,
 	}
 
-	for _, opt := range opts {
-		opt(orgIdentifier)
+	if opts != nil {
+		orgIdentifier.IdentifierScheme = opts.IdentifierScheme
 	}
 
 	return orgIdentifier, nil
 }
 
-func WithIdentifierScheme(scheme string) OrganizationIdentifierOption {
-	return func(o *OrganizationIdentifier) {
-		o.IdentifierScheme = scheme
-	}
+// URLOptions contains optional fields for creating a URL
+type URLOptions struct {
+	OrganizationID *string
+	ServiceID      *string
+	Label          *string
 }
 
-// URL Constructor
+// NewURL creates a new URL with required fields and optional fields
+func NewURL(url string, opts *URLOptions) (*URL, error) {
+	now := getICalTime()
+	id := newUUIDV4()
 
-type URLOption func(*URL)
-
-func NewURL(id, url string, opts ...URLOption) (*URL, error) {
-	if id == "" || url == "" {
-		return nil, errors.New("id and url are required fields")
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
-	u := &URL{
-		ID:  id,
-		URL: url,
+	urlObj := &URL{
+		CreatedAt: now,
+		UpdatedAt: now,
+		ID:        id,
+		URL:       url,
 	}
 
-	for _, opt := range opts {
-		opt(u)
+	if opts != nil {
+		if opts.OrganizationID != nil && !validateUUID(*opts.OrganizationID) {
+			return nil, fmt.Errorf("invalid organization ID format: must be UUIDv4")
+		}
+		if opts.ServiceID != nil && !validateUUID(*opts.ServiceID) {
+			return nil, fmt.Errorf("invalid service ID format: must be UUIDv4")
+		}
+		urlObj.OrganizationID = opts.OrganizationID
+		urlObj.ServiceID = opts.ServiceID
+		urlObj.Label = opts.Label
 	}
 
-	return u, nil
+	return urlObj, nil
 }
 
-func WithURLLabel(label string) URLOption {
-	return func(u *URL) {
-		u.Label = label
-	}
+// FundingOptions contains optional fields for creating a Funding
+type FundingOptions struct {
+	OrganizationID *string
+	ServiceID      *string
+	Source         *string
 }
 
-func FK_URLOrganizationID(orgID string) URLOption {
-	return func(u *URL) {
-		u.OrganizationID = orgID
-	}
-}
+func NewFunding(opts *FundingOptions) (*Funding, error) {
+	now := getICalTime()
+	id := newUUIDV4()
 
-func FK_URLServiceID(serviceID string) URLOption {
-	return func(u *URL) {
-		u.ServiceID = serviceID
-	}
-}
-
-// Funding Constructor
-
-type FundingOption func(*Funding)
-
-func NewFunding(id string, opts ...FundingOption) (*Funding, error) {
-	if id == "" {
-		return nil, errors.New("id is a required field")
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
 	funding := &Funding{
-		ID: id,
+		CreatedAt: now,
+		UpdatedAt: now,
+		ID:        id,
 	}
 
-	for _, opt := range opts {
-		opt(funding)
+	if opts != nil {
+		if opts.OrganizationID != nil && !validateUUID(*opts.OrganizationID) {
+			return nil, fmt.Errorf("invalid organization ID format: must be UUIDv4")
+		}
+		if opts.ServiceID != nil && !validateUUID(*opts.ServiceID) {
+			return nil, fmt.Errorf("invalid service ID format: must be UUIDv4")
+		}
+		funding.OrganizationID = opts.OrganizationID
+		funding.ServiceID = opts.ServiceID
+		funding.Source = opts.Source
 	}
 
 	return funding, nil
 }
 
-func FK_FundingOrganizationID(organizationID string) FundingOption {
-	return func(f *Funding) {
-		f.OrganizationID = organizationID
-	}
+// UnitOptions contains optional fields for creating a Unit
+type UnitOptions struct {
+	Scheme     *string
+	Identifier *string
+	URI        *string
 }
 
-func FK_FundingServiceID(serviceID string) FundingOption {
-	return func(f *Funding) {
-		f.ServiceID = serviceID
-	}
-}
+func NewUnit(name string, opts *UnitOptions) (*Unit, error) {
+	now := getICalTime()
+	id := newUUIDV4()
 
-func WithSource(source string) FundingOption {
-	return func(f *Funding) {
-		f.Source = source
-	}
-}
-
-// Unit Constructor
-
-type UnitOption func(*Unit)
-
-func NewUnit(id, name string, opts ...UnitOption) (*Unit, error) {
-	if id == "" || name == "" {
-		return nil, errors.New("id and name are required fields")
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
 	unit := &Unit{
-		ID:   id,
-		Name: name,
+		CreatedAt: now,
+		UpdatedAt: now,
+		ID:        id,
+		Name:      name,
 	}
 
-	for _, opt := range opts {
-		opt(unit)
+	if opts != nil {
+		unit.Scheme = opts.Scheme
+		unit.Identifier = opts.Identifier
+		unit.URI = opts.URI
 	}
 
 	return unit, nil
 }
 
-func WithScheme(scheme string) UnitOption {
-	return func(u *Unit) {
-		u.Scheme = scheme
-	}
+// ProgramOptions contains optional fields for creating a Program
+type ProgramOptions struct {
+	AlternateName *string
 }
 
-func WithIdentifier(identifier string) UnitOption {
-	return func(u *Unit) {
-		u.Identifier = identifier
-	}
-}
-
-func WithUnitURI(uri string) UnitOption {
-	return func(u *Unit) {
-		u.URI = uri
-	}
-}
-
-// Program Option Constructor
-type ProgramOption func(*Program)
-
-func NewProgram(id, organizationID, name, description string, opts ...ProgramOption) (*Program, error) {
-	if id == "" || organizationID == "" || name == "" || description == "" {
-		return nil, errors.New("id, organization_id, name, and description are required fields")
+func NewProgram(organizationID, name, description string, opts *ProgramOptions) (*Program, error) {
+	if !validateUUID(organizationID) {
+		return nil, fmt.Errorf("invalid organization ID format: must be UUIDv4")
 	}
 
-	prog := &Program{
+	now := getICalTime()
+	id := newUUIDV4()
+
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
+	}
+
+	program := &Program{
+		CreatedAt:      now,
+		UpdatedAt:      now,
 		ID:             id,
 		OrganizationID: organizationID,
 		Name:           name,
 		Description:    description,
 	}
 
-	for _, opt := range opts {
-		opt(prog)
+	if opts != nil {
+		program.AlternateName = opts.AlternateName
 	}
 
-	return prog, nil
+	return program, nil
 }
 
-func WithProgramAlternateName(name string) ProgramOption {
-	return func(p *Program) {
-		p.AlternateName = name
-	}
+// ServiceOptions contains optional fields for creating a Service
+type ServiceOptions struct {
+	ProgramID              *string
+	AlternateName          *string
+	Description            *string
+	URL                    *string
+	Email                  *string
+	InterpretationServices *string
+	ApplicationProcess     *string
+	FeesDescription        *string
+	WaitTime               *string
+	Fees                   *string
+	Accreditations         *string
+	EligibilityDescription *string
+	MinimumAge             *float64
+	MaximumAge             *float64
+	AssuredDate            *time.Time
+	AssurerEmail           *string
+	Licenses               *string
+	Alert                  *string
+	LastModified           *time.Time
 }
 
-// Service Constructor
-
-type ServiceOption func(*Service)
-
-func NewService(id, organizationID, name string, status ServiceStatusEnum, opts ...ServiceOption) (*Service, error) {
-	if id == "" || organizationID == "" || name == "" {
-		return nil, errors.New("id, organizationID, and name are required fields")
+func NewService(organizationID, name string, status ServiceStatusEnum, opts *ServiceOptions) (*Service, error) {
+	if !validateUUID(organizationID) {
+		return nil, fmt.Errorf("invalid organization ID format: must be UUIDv4")
 	}
 
-	svc := &Service{
+	now := getICalTime()
+	id := newUUIDV4()
+
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
+	}
+
+	service := &Service{
+		CreatedAt:      now,
+		UpdatedAt:      now,
 		ID:             id,
 		OrganizationID: organizationID,
 		Name:           name,
 		Status:         status,
 	}
 
-	for _, opt := range opts {
-		opt(svc)
+	if opts != nil {
+		if opts.ProgramID != nil && !validateUUID(*opts.ProgramID) {
+			return nil, fmt.Errorf("invalid program ID format: must be UUIDv4")
+		}
+		service.ProgramID = opts.ProgramID
+		service.AlternateName = opts.AlternateName
+		service.Description = opts.Description
+		service.URL = opts.URL
+		service.Email = opts.Email
+		service.InterpretationServices = opts.InterpretationServices
+		service.ApplicationProcess = opts.ApplicationProcess
+		service.FeesDescription = opts.FeesDescription
+		service.WaitTime = opts.WaitTime
+		service.Fees = opts.Fees
+		service.Accreditations = opts.Accreditations
+		service.EligibilityDescription = opts.EligibilityDescription
+		service.MinimumAge = opts.MinimumAge
+		service.MaximumAge = opts.MaximumAge
+		service.AssuredDate = opts.AssuredDate
+		service.AssurerEmail = opts.AssurerEmail
+		service.Licenses = opts.Licenses
+		service.Alert = opts.Alert
+		service.LastModified = opts.LastModified
 	}
 
-	return svc, nil
+	return service, nil
 }
 
-func FK_ServiceProgramID(programID string) ServiceOption {
-	return func(s *Service) {
-		s.ProgramID = programID
-	}
+// ServiceAreaOptions contains optional fields for creating a ServiceArea
+type ServiceAreaOptions struct {
+	ServiceID           *string
+	ServiceAtLocationID *string
+	Name                *string
+	Description         *string
+	Extent              *string
+	ExtentType          *ExtentTypeEnum
+	URI                 *string
 }
 
-func WithServiceAlternateName(name string) ServiceOption {
-	return func(s *Service) {
-		s.AlternateName = name
+func NewServiceArea(opts *ServiceAreaOptions) (*ServiceArea, error) {
+	now := getICalTime()
+	id := newUUIDV4()
+
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
+
+	serviceArea := &ServiceArea{
+		CreatedAt: now,
+		UpdatedAt: now,
+		ID:        id,
+	}
+
+	if opts != nil {
+		if opts.ServiceID != nil && !validateUUID(*opts.ServiceID) {
+			return nil, fmt.Errorf("invalid service ID format: must be UUIDv4")
+		}
+		if opts.ServiceAtLocationID != nil && !validateUUID(*opts.ServiceAtLocationID) {
+			return nil, fmt.Errorf("invalid service at location ID format: must be UUIDv4")
+		}
+		serviceArea.ServiceID = opts.ServiceID
+		serviceArea.ServiceAtLocationID = opts.ServiceAtLocationID
+		serviceArea.Name = opts.Name
+		serviceArea.Description = opts.Description
+		serviceArea.Extent = opts.Extent
+		serviceArea.ExtentType = opts.ExtentType
+		serviceArea.URI = opts.URI
+	}
+
+	return serviceArea, nil
 }
 
-func WithServiceDescription(description string) ServiceOption {
-	return func(s *Service) {
-		s.Description = description
-	}
+// ServiceAtLocationOptions contains optional fields for creating a ServiceAtLocation
+type ServiceAtLocationOptions struct {
+	Description *string
 }
 
-func WithServiceURL(url string) ServiceOption {
-	return func(s *Service) {
-		s.URL = url
+func NewServiceAtLocation(serviceID, locationID string, opts *ServiceAtLocationOptions) (*ServiceAtLocation, error) {
+	if !validateUUID(serviceID) {
+		return nil, fmt.Errorf("invalid service ID format: must be UUIDv4")
 	}
-}
-
-func WithServiceEmail(email string) ServiceOption {
-	return func(s *Service) {
-		s.Email = email
-	}
-}
-
-func WithInterpretationServices(services string) ServiceOption {
-	return func(s *Service) {
-		s.InterpretationServices = services
-	}
-}
-
-func WithApplicationProcess(process string) ServiceOption {
-	return func(s *Service) {
-		s.ApplicationProcess = process
-	}
-}
-
-func WithFeesDescription(description string) ServiceOption {
-	return func(s *Service) {
-		s.FeesDescription = description
-	}
-}
-
-func WithAccreditations(accreditations string) ServiceOption {
-	return func(s *Service) {
-		s.Accreditations = accreditations
-	}
-}
-
-func WithEligibilityDescription(description string) ServiceOption {
-	return func(s *Service) {
-		s.EligibilityDescription = description
-	}
-}
-
-func WithAgeRange(min, max float64) ServiceOption {
-	return func(s *Service) {
-		s.MinimumAge = min
-		s.MaximumAge = max
-	}
-}
-
-func WithAssurance(assuredDate time.Time, assurerEmail string) ServiceOption {
-	return func(s *Service) {
-		s.AssuredDate = assuredDate
-		s.AssurerEmail = assurerEmail
-	}
-}
-
-func WithAlert(alert string) ServiceOption {
-	return func(s *Service) {
-		s.Alert = alert
-	}
-}
-
-func WithLastModified(lastModified time.Time) ServiceOption {
-	return func(s *Service) {
-		s.LastModified = lastModified
-	}
-}
-
-// Service Area Constructor
-
-type ServiceAreaOption func(*ServiceArea)
-
-func NewServiceArea(id string, opts ...ServiceAreaOption) (*ServiceArea, error) {
-	if id == "" {
-		return nil, errors.New("id is required")
+	if !validateUUID(locationID) {
+		return nil, fmt.Errorf("invalid location ID format: must be UUIDv4")
 	}
 
-	sa := &ServiceArea{
-		ID: id,
+	now := getICalTime()
+	id := newUUIDV4()
+
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
-	for _, opt := range opts {
-		opt(sa)
-	}
-
-	return sa, nil
-}
-
-func FK_AreaServiceID(serviceID string) ServiceAreaOption {
-	return func(sa *ServiceArea) {
-		sa.ServiceID = serviceID
-	}
-}
-
-func FK_ServiceAtLocationID(locationID string) ServiceAreaOption {
-	return func(sa *ServiceArea) {
-		sa.ServiceAtLocationID = locationID
-	}
-}
-
-func WithServiceAreaName(name string) ServiceAreaOption {
-	return func(sa *ServiceArea) {
-		sa.Name = name
-	}
-}
-
-func WithServiceAreaDescription(description string) ServiceAreaOption {
-	return func(sa *ServiceArea) {
-		sa.Description = description
-	}
-}
-
-func WithExtent(extent string) ServiceAreaOption {
-	return func(sa *ServiceArea) {
-		sa.Extent = extent
-	}
-}
-
-func WithExtentType(extentType ExtentTypeEnum) ServiceAreaOption {
-	return func(sa *ServiceArea) {
-		sa.ExtentType = extentType
-	}
-}
-
-func WithServiceAreaURI(uri string) ServiceAreaOption {
-	return func(sa *ServiceArea) {
-		sa.URI = uri
-	}
-}
-
-// Service at Location Constructor
-
-type ServiceAtLocationOption func(*ServiceAtLocation)
-
-func NewServiceAtLocation(id, serviceID, locationID string, opts ...ServiceAtLocationOption) (*ServiceAtLocation, error) {
-	if id == "" || serviceID == "" || locationID == "" {
-		return nil, errors.New("id, service_id, and location_id are required fields")
-	}
-
-	sal := &ServiceAtLocation{
+	serviceAtLocation := &ServiceAtLocation{
+		CreatedAt:  now,
+		UpdatedAt:  now,
 		ID:         id,
 		ServiceID:  serviceID,
 		LocationID: locationID,
 	}
 
-	for _, opt := range opts {
-		opt(sal)
+	if opts != nil {
+		serviceAtLocation.Description = opts.Description
 	}
 
-	return sal, nil
+	return serviceAtLocation, nil
 }
 
-func WithServiceAtLocationDescription(description string) ServiceAtLocationOption {
-	return func(s *ServiceAtLocation) {
-		s.Description = description
-	}
+// LocationOptions contains optional fields for creating a Location
+type LocationOptions struct {
+	OrganizationID         *string
+	URL                    *string
+	Name                   *string
+	AlternateName          *string
+	Description            *string
+	Transportation         *string
+	Latitude               *float64
+	Longitude              *float64
+	ExternalIdentifier     *string
+	ExternalIdentifierType *string
 }
 
-// Location Constructor
+func NewLocation(locationType LocationLocationTypeEnum, opts *LocationOptions) (*Location, error) {
+	now := getICalTime()
+	id := newUUIDV4()
 
-type LocationOption func(*Location)
-
-func NewLocation(id string, locationType LocationLocationTypeEnum, opts ...LocationOption) (*Location, error) {
-	if id == "" {
-		return nil, errors.New("id is required")
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
-	loc := &Location{
+	location := &Location{
+		CreatedAt:    now,
+		UpdatedAt:    now,
 		ID:           id,
 		LocationType: locationType,
 	}
 
-	for _, opt := range opts {
-		opt(loc)
+	if opts != nil {
+		if opts.OrganizationID != nil && !validateUUID(*opts.OrganizationID) {
+			return nil, fmt.Errorf("invalid organization ID format: must be UUIDv4")
+		}
+		location.OrganizationID = opts.OrganizationID
+		location.URL = opts.URL
+		location.Name = opts.Name
+		location.AlternateName = opts.AlternateName
+		location.Description = opts.Description
+		location.Transportation = opts.Transportation
+		location.Latitude = opts.Latitude
+		location.Longitude = opts.Longitude
+		location.ExternalIdentifier = opts.ExternalIdentifier
+		location.ExternalIdentifierType = opts.ExternalIdentifierType
 	}
 
-	return loc, nil
+	return location, nil
 }
 
-func FK_LocationOrganizationID(orgID string) LocationOption {
-	return func(l *Location) {
-		l.OrganizationID = orgID
-	}
+// AddressOptions contains optional fields for creating an Address
+type AddressOptions struct {
+	LocationID *string
+	Attention  *string
+	Address2   *string
+	Region     *string
 }
 
-func WithLocationURL(url string) LocationOption {
-	return func(l *Location) {
-		l.URL = url
-	}
-}
+func NewAddress(
+	address1, city, stateProvince, postalCode, country string,
+	addressType LocationLocationTypeEnum,
+	opts *AddressOptions,
+) (*Address, error) {
+	now := getICalTime()
+	id := newUUIDV4()
 
-func WithLocationName(name string) LocationOption {
-	return func(l *Location) {
-		l.Name = name
-	}
-}
-
-func WithLocationAlternateName(name string) LocationOption {
-	return func(l *Location) {
-		l.AlternateName = name
-	}
-}
-
-func WithLocationDescription(description string) LocationOption {
-	return func(l *Location) {
-		l.Description = description
-	}
-}
-
-func WithTransportation(transportation string) LocationOption {
-	return func(l *Location) {
-		l.Transportation = transportation
-	}
-}
-
-func WithCoordinates(latitude, longitude float64) LocationOption {
-	return func(l *Location) {
-		l.Latitude = latitude
-		l.Longitude = longitude
-	}
-}
-
-func WithExternalIdentifier(id string, idType string) LocationOption {
-	return func(l *Location) {
-		l.ExternalIdentifier = id
-		l.ExternalIdentifierType = idType
-	}
-}
-
-// Address Option Constructor
-
-type AddressOption func(*Address)
-
-func NewAddress(id, address1, city, stateProvince, postalCode, country string, addressType LocationLocationTypeEnum) (*Address, error) {
-	if id == "" || address1 == "" || city == "" || stateProvince == "" || postalCode == "" || country == "" {
-		return nil, errors.New("id, address1, city, stateProvince, postalCode, and country are required fields")
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
 	if len(country) != 2 {
-		return nil, errors.New("country must be a 2-character code")
+		return nil, fmt.Errorf("country must be a 2-letter code")
 	}
 
-	if addressType != "physical" && addressType != "postal" && addressType != "virtual" {
-		return nil, errors.New("address type must be physical, postal, or virtual")
-	}
-
-	addr := &Address{
+	address := &Address{
+		CreatedAt:     now,
+		UpdatedAt:     now,
 		ID:            id,
 		Address1:      address1,
 		City:          city,
@@ -557,723 +486,542 @@ func NewAddress(id, address1, city, stateProvince, postalCode, country string, a
 		AddressType:   addressType,
 	}
 
-	return addr, nil
+	if opts != nil {
+		if opts.LocationID != nil && !validateUUID(*opts.LocationID) {
+			return nil, fmt.Errorf("invalid location ID format: must be UUIDv4")
+		}
+		address.LocationID = opts.LocationID
+		address.Attention = opts.Attention
+		address.Address2 = opts.Address2
+		address.Region = opts.Region
+	}
+
+	return address, nil
 }
 
-func FK_AddressLocationID(locationID string) AddressOption {
-	return func(a *Address) {
-		a.LocationID = locationID
-	}
+// RequiredDocumentOptions contains optional fields for creating a RequiredDocument
+type RequiredDocumentOptions struct {
+	ServiceID *string
+	Document  *string
+	URI       *string
 }
 
-func WithAttention(attention string) AddressOption {
-	return func(a *Address) {
-		a.Attention = attention
-	}
-}
+func NewRequiredDocument(opts *RequiredDocumentOptions) (*RequiredDocument, error) {
+	now := getICalTime()
+	id := newUUIDV4()
 
-func WithAddress2(address2 string) AddressOption {
-	return func(a *Address) {
-		a.Address2 = address2
-	}
-}
-
-func WithRegion(region string) AddressOption {
-	return func(a *Address) {
-		a.Region = region
-	}
-}
-
-// Required Document Constructor
-
-type RequiredDocumentOption func(*RequiredDocument)
-
-func NewRequiredDocument(id string, opts ...RequiredDocumentOption) (*RequiredDocument, error) {
-	if id == "" {
-		return nil, errors.New("id is required")
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
-	doc := &RequiredDocument{
-		ID:        id,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-
-	for _, opt := range opts {
-		opt(doc)
-	}
-
-	return doc, nil
-}
-
-func FK_DocumentServiceID(serviceID string) RequiredDocumentOption {
-	return func(d *RequiredDocument) {
-		d.ServiceID = serviceID
-	}
-}
-
-func WithDocument(document string) RequiredDocumentOption {
-	return func(d *RequiredDocument) {
-		d.Document = document
-	}
-}
-
-func WithDocumentURI(uri string) RequiredDocumentOption {
-	return func(d *RequiredDocument) {
-		d.URI = uri
-	}
-}
-
-func WithCreatedAt(t time.Time) RequiredDocumentOption {
-	return func(d *RequiredDocument) {
-		d.CreatedAt = t
-	}
-}
-
-func WithUpdatedAt(t time.Time) RequiredDocumentOption {
-	return func(d *RequiredDocument) {
-		d.UpdatedAt = t
-	}
-}
-
-// Language Constructor
-
-type LanguageOption func(*Language)
-
-func NewLanguage(id string, opts ...LanguageOption) (*Language, error) {
-	if id == "" {
-		return nil, errors.New("id is required")
-	}
-
-	now := time.Now()
-	lang := &Language{
-		ID:        id,
+	requiredDocument := &RequiredDocument{
 		CreatedAt: now,
 		UpdatedAt: now,
+		ID:        id,
 	}
 
-	for _, opt := range opts {
-		opt(lang)
+	if opts != nil {
+		if opts.ServiceID != nil && !validateUUID(*opts.ServiceID) {
+			return nil, fmt.Errorf("invalid service ID format: must be UUIDv4")
+		}
+		requiredDocument.ServiceID = opts.ServiceID
+		requiredDocument.Document = opts.Document
+		requiredDocument.URI = opts.URI
 	}
 
-	return lang, nil
+	return requiredDocument, nil
 }
 
-func FK_LanguageServiceID(serviceID string) LanguageOption {
-	return func(l *Language) {
-		l.ServiceID = serviceID
-	}
+// LanguageOptions contains optional fields for creating a Language
+type LanguageOptions struct {
+	ServiceID  *string
+	LocationID *string
+	PhoneID    *string
+	Name       *string
+	Code       *string
+	Note       *string
 }
 
-func FK_LanguageLocationID(locationID string) LanguageOption {
-	return func(l *Language) {
-		l.LocationID = locationID
+func NewLanguage(opts *LanguageOptions) (*Language, error) {
+	now := getICalTime()
+	id := newUUIDV4()
+
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
+
+	language := &Language{
+		CreatedAt: now,
+		UpdatedAt: now,
+		ID:        id,
+	}
+
+	if opts != nil {
+		if opts.ServiceID != nil && !validateUUID(*opts.ServiceID) {
+			return nil, fmt.Errorf("invalid service ID format: must be UUIDv4")
+		}
+		if opts.LocationID != nil && !validateUUID(*opts.LocationID) {
+			return nil, fmt.Errorf("invalid location ID format: must be UUIDv4")
+		}
+		if opts.PhoneID != nil && !validateUUID(*opts.PhoneID) {
+			return nil, fmt.Errorf("invalid phone ID format: must be UUIDv4")
+		}
+		language.ServiceID = opts.ServiceID
+		language.LocationID = opts.LocationID
+		language.PhoneID = opts.PhoneID
+		language.Name = opts.Name
+		language.Code = opts.Code
+		language.Note = opts.Note
+	}
+
+	return language, nil
 }
 
-func FK_LanguagePhoneID(phoneID string) LanguageOption {
-	return func(l *Language) {
-		l.PhoneID = phoneID
-	}
+// AccessibilityOptions contains optional fields for creating an Accessibility
+type AccessibilityOptions struct {
+	LocationID  *string
+	Description *string
+	Details     *string
+	URL         *string
 }
 
-func WithLanguageName(name string) LanguageOption {
-	return func(l *Language) {
-		l.Name = name
+func NewAccessibility(opts *AccessibilityOptions) (*Accessibility, error) {
+	now := getICalTime()
+	id := newUUIDV4()
+
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
+
+	accessibility := &Accessibility{
+		CreatedAt: now,
+		UpdatedAt: now,
+		ID:        id,
+	}
+
+	if opts != nil {
+		if opts.LocationID != nil && !validateUUID(*opts.LocationID) {
+			return nil, fmt.Errorf("invalid location ID format: must be UUIDv4")
+		}
+		accessibility.LocationID = opts.LocationID
+		accessibility.Description = opts.Description
+		accessibility.Details = opts.Details
+		accessibility.URL = opts.URL
+	}
+
+	return accessibility, nil
 }
 
-func WithLanguageCode(code string) LanguageOption {
-	return func(l *Language) {
-		l.Code = code
-	}
+// AttributeOptions contains optional fields for creating an Attribute
+type AttributeOptions struct {
+	LinkType *string
+	Value    *string
+	Label    *string
 }
 
-func WithLanguageNote(note string) LanguageOption {
-	return func(l *Language) {
-		l.Note = note
-	}
-}
-
-// Accessibility Constructor
-
-type AccessibilityOption func(*Accessibility)
-
-func NewAccessibility(id string, opts ...AccessibilityOption) (*Accessibility, error) {
-	if id == "" {
-		return nil, errors.New("id is required")
+func NewAttribute(taxonomyTermID, linkID, linkEntity string, opts *AttributeOptions) (*Attribute, error) {
+	if !validateUUID(taxonomyTermID) {
+		return nil, fmt.Errorf("invalid taxonomy term ID format: must be UUIDv4")
 	}
 
-	acc := &Accessibility{
-		ID: id,
+	now := getICalTime()
+	id := newUUIDV4()
+
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
-	for _, opt := range opts {
-		opt(acc)
-	}
-
-	return acc, nil
-}
-
-func FK_AccessibilityLocationID(locationID string) AccessibilityOption {
-	return func(a *Accessibility) {
-		a.LocationID = locationID
-	}
-}
-
-func WithAccessibilityDescription(description string) AccessibilityOption {
-	return func(a *Accessibility) {
-		a.Description = description
-	}
-}
-
-func WithAccessibilityDetails(details string) AccessibilityOption {
-	return func(a *Accessibility) {
-		a.Details = details
-	}
-}
-
-func WithAccessibilityURL(url string) AccessibilityOption {
-	return func(a *Accessibility) {
-		a.URL = url
-	}
-}
-
-// Attribute Constructor
-
-type AttributeOption func(*Attribute)
-
-func NewAttribute(id, taxonomyTermID, linkID, linkEntity string, opts ...AttributeOption) (*Attribute, error) {
-	if id == "" || taxonomyTermID == "" || linkID == "" || linkEntity == "" {
-		return nil, errors.New("id, taxonomy_term_id, link_id, and link_entity are required fields")
-	}
-
-	attr := &Attribute{
+	attribute := &Attribute{
+		CreatedAt:      now,
+		UpdatedAt:      now,
 		ID:             id,
 		TaxonomyTermID: taxonomyTermID,
 		LinkID:         linkID,
 		LinkEntity:     linkEntity,
-		CreatedAt:      time.Now(),
 	}
 
-	for _, opt := range opts {
-		opt(attr)
+	if opts != nil {
+		attribute.LinkType = opts.LinkType
+		attribute.Value = opts.Value
+		attribute.Label = opts.Label
 	}
 
-	return attr, nil
+	return attribute, nil
 }
 
-func WithLinkType(linkType string) AttributeOption {
-	return func(a *Attribute) {
-		a.LinkType = linkType
-	}
+// TaxonomyOptions contains optional fields for creating a Taxonomy
+type TaxonomyOptions struct {
+	URI     *string
+	Version *string
 }
 
-func WithValue(value string) AttributeOption {
-	return func(a *Attribute) {
-		a.Value = value
-	}
-}
+func NewTaxonomy(name, description string, opts *TaxonomyOptions) (*Taxonomy, error) {
+	now := getICalTime()
+	id := newUUIDV4()
 
-func WithLabel(label string) AttributeOption {
-	return func(a *Attribute) {
-		a.Label = label
-	}
-}
-
-func WithAttributeCreatedAt(createdAt time.Time) AttributeOption {
-	return func(a *Attribute) {
-		a.CreatedAt = createdAt
-	}
-}
-
-func WithAttributeUpdatedAt(updatedAt time.Time) AttributeOption {
-	return func(a *Attribute) {
-		a.UpdatedAt = updatedAt
-	}
-}
-
-// Taxonomy Constructor
-
-type TaxonomyOption func(*Taxonomy)
-
-func NewTaxonomy(id, name, description string, opts ...TaxonomyOption) (*Taxonomy, error) {
-	if id == "" || name == "" || description == "" {
-		return nil, errors.New("id, name, and description are required fields")
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
 	taxonomy := &Taxonomy{
+		CreatedAt:   now,
+		UpdatedAt:   now,
 		ID:          id,
 		Name:        name,
 		Description: description,
 	}
 
-	for _, opt := range opts {
-		opt(taxonomy)
+	if opts != nil {
+		taxonomy.URI = opts.URI
+		taxonomy.Version = opts.Version
 	}
 
 	return taxonomy, nil
 }
 
-func WithTaxonomyURI(uri string) TaxonomyOption {
-	return func(t *Taxonomy) {
-		t.URI = uri
-	}
+// TaxonomyTermOptions contains optional fields for creating a TaxonomyTerm
+type TaxonomyTermOptions struct {
+	TaxonomyID  *string
+	ParentID    *string
+	Code        *string
+	TaxonomyStr *string
+	Language    *string
+	TermURI     *string
 }
 
-func WithVersion(version string) TaxonomyOption {
-	return func(t *Taxonomy) {
-		t.Version = version
-	}
-}
+func NewTaxonomyTerm(name, description string, opts *TaxonomyTermOptions) (*TaxonomyTerm, error) {
+	now := getICalTime()
+	id := newUUIDV4()
 
-// Taxonomy Term Constructor
-
-type TaxonomyTermOption func(*TaxonomyTerm)
-
-func NewTaxonomyTerm(id, name, description string, opts ...TaxonomyTermOption) (*TaxonomyTerm, error) {
-	if id == "" || name == "" || description == "" {
-		return nil, errors.New("id, name, and description are required fields")
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
-	term := &TaxonomyTerm{
+	taxonomyTerm := &TaxonomyTerm{
+		CreatedAt:   now,
+		UpdatedAt:   now,
 		ID:          id,
 		Name:        name,
 		Description: description,
 	}
 
-	for _, opt := range opts {
-		opt(term)
+	if opts != nil {
+		if opts.TaxonomyID != nil && !validateUUID(*opts.TaxonomyID) {
+			return nil, fmt.Errorf("invalid taxonomy ID format: must be UUIDv4")
+		}
+		if opts.ParentID != nil && !validateUUID(*opts.ParentID) {
+			return nil, fmt.Errorf("invalid parent ID format: must be UUIDv4")
+		}
+		taxonomyTerm.TaxonomyID = opts.TaxonomyID
+		taxonomyTerm.ParentID = opts.ParentID
+		taxonomyTerm.Code = opts.Code
+		taxonomyTerm.TaxonomyStr = opts.TaxonomyStr
+		taxonomyTerm.Language = opts.Language
+		taxonomyTerm.TermURI = opts.TermURI
 	}
 
-	return term, nil
+	return taxonomyTerm, nil
 }
 
-func FK_TaxonomyID(taxonomyID string) TaxonomyTermOption {
-	return func(t *TaxonomyTerm) {
-		t.TaxonomyID = taxonomyID
-	}
+// ContactOptions contains optional fields for creating a Contact
+type ContactOptions struct {
+	OrganizationID      *string
+	ServiceID           *string
+	ServiceAtLocationID *string
+	LocationID          *string
+	Name                *string
+	Title               *string
+	Department          *string
+	Email               *string
 }
 
-func FK_ParentID(parentID string) TaxonomyTermOption {
-	return func(t *TaxonomyTerm) {
-		t.ParentID = parentID
-	}
-}
+func NewContact(opts *ContactOptions) (*Contact, error) {
+	now := getICalTime()
+	id := newUUIDV4()
 
-func WithCode(code string) TaxonomyTermOption {
-	return func(t *TaxonomyTerm) {
-		t.Code = code
-	}
-}
-
-func WithTaxonomy(taxonomy string) TaxonomyTermOption {
-	return func(t *TaxonomyTerm) {
-		t.Taxonomy = taxonomy
-	}
-}
-
-func WithLanguage(language string) TaxonomyTermOption {
-	return func(t *TaxonomyTerm) {
-		t.Language = language
-	}
-}
-
-func WithTermURI(uri string) TaxonomyTermOption {
-	return func(t *TaxonomyTerm) {
-		t.TermURI = uri
-	}
-}
-
-// Contact Constructor
-
-type ContactOption func(*Contact)
-
-func NewContact(id string, opts ...ContactOption) (*Contact, error) {
-	if id == "" {
-		return nil, errors.New("id is required")
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
 	contact := &Contact{
+		CreatedAt: now,
+		UpdatedAt: now,
 		ID:        id,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
 	}
 
-	for _, opt := range opts {
-		opt(contact)
+	if opts != nil {
+		if opts.OrganizationID != nil && !validateUUID(*opts.OrganizationID) {
+			return nil, fmt.Errorf("invalid organization ID format: must be UUIDv4")
+		}
+		if opts.ServiceID != nil && !validateUUID(*opts.ServiceID) {
+			return nil, fmt.Errorf("invalid service ID format: must be UUIDv4")
+		}
+		if opts.ServiceAtLocationID != nil && !validateUUID(*opts.ServiceAtLocationID) {
+			return nil, fmt.Errorf("invalid service at location ID format: must be UUIDv4")
+		}
+		if opts.LocationID != nil && !validateUUID(*opts.LocationID) {
+			return nil, fmt.Errorf("invalid location ID format: must be UUIDv4")
+		}
+		contact.OrganizationID = opts.OrganizationID
+		contact.ServiceID = opts.ServiceID
+		contact.ServiceAtLocationID = opts.ServiceAtLocationID
+		contact.LocationID = opts.LocationID
+		contact.Name = opts.Name
+		contact.Title = opts.Title
+		contact.Department = opts.Department
+		contact.Email = opts.Email
 	}
 
 	return contact, nil
 }
 
-func WithContactOrganization(orgID string) ContactOption {
-	return func(c *Contact) {
-		c.OrganizationID = orgID
-	}
+// PhoneOptions contains optional fields for creating a Phone
+type PhoneOptions struct {
+	LocationID          *string
+	ServiceID           *string
+	OrganizationID      *string
+	ContactID           *string
+	ServiceAtLocationID *string
+	Extension           *float64
+	Type                *string
+	Description         *string
 }
 
-func WithContactService(serviceID string) ContactOption {
-	return func(c *Contact) {
-		c.ServiceID = serviceID
-	}
-}
+func NewPhone(number string, opts *PhoneOptions) (*Phone, error) {
+	now := getICalTime()
+	id := newUUIDV4()
 
-func WithServiceAtLocation(serviceAtLocationID string) ContactOption {
-	return func(c *Contact) {
-		c.ServiceAtLocationID = serviceAtLocationID
-	}
-}
-
-func WithLocation(locationID string) ContactOption {
-	return func(c *Contact) {
-		c.LocationID = locationID
-	}
-}
-
-func WithContactName(name string) ContactOption {
-	return func(c *Contact) {
-		c.Name = name
-	}
-}
-
-func WithTitle(title string) ContactOption {
-	return func(c *Contact) {
-		c.Title = title
-	}
-}
-
-func WithDepartment(department string) ContactOption {
-	return func(c *Contact) {
-		c.Department = department
-	}
-}
-
-func WithContactEmail(email string) ContactOption {
-	return func(c *Contact) {
-		c.Email = email
-	}
-}
-
-// Phone Constructor
-
-type PhoneOption func(*Phone)
-
-func NewPhone(id, number string, opts ...PhoneOption) (*Phone, error) {
-	if id == "" || number == "" {
-		return nil, errors.New("id and number are required fields")
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
 	phone := &Phone{
-		ID:     id,
-		Number: number,
+		CreatedAt: now,
+		UpdatedAt: now,
+		ID:        id,
+		Number:    number,
 	}
 
-	for _, opt := range opts {
-		opt(phone)
+	if opts != nil {
+		if opts.LocationID != nil && !validateUUID(*opts.LocationID) {
+			return nil, fmt.Errorf("invalid location ID format: must be UUIDv4")
+		}
+		if opts.ServiceID != nil && !validateUUID(*opts.ServiceID) {
+			return nil, fmt.Errorf("invalid service ID format: must be UUIDv4")
+		}
+		if opts.OrganizationID != nil && !validateUUID(*opts.OrganizationID) {
+			return nil, fmt.Errorf("invalid organization ID format: must be UUIDv4")
+		}
+		if opts.ContactID != nil && !validateUUID(*opts.ContactID) {
+			return nil, fmt.Errorf("invalid contact ID format: must be UUIDv4")
+		}
+		if opts.ServiceAtLocationID != nil && !validateUUID(*opts.ServiceAtLocationID) {
+			return nil, fmt.Errorf("invalid service at location ID format: must be UUIDv4")
+		}
+		phone.LocationID = opts.LocationID
+		phone.ServiceID = opts.ServiceID
+		phone.OrganizationID = opts.OrganizationID
+		phone.ContactID = opts.ContactID
+		phone.ServiceAtLocationID = opts.ServiceAtLocationID
+		phone.Extension = opts.Extension
+		phone.Type = opts.Type
+		phone.Description = opts.Description
 	}
 
 	return phone, nil
 }
 
-func FK_LocationID(locationID string) PhoneOption {
-	return func(p *Phone) {
-		p.LocationID = locationID
-	}
+// ScheduleOptions contains optional fields for creating a Schedule
+type ScheduleOptions struct {
+	ServiceID           *string
+	LocationID          *string
+	ServiceAtLocationID *string
+	ValidFrom           *time.Time
+	ValidTo             *time.Time
+	DTStart             *time.Time
+	Timezone            *float64
+	Until               *time.Time
+	Count               *int
+	Wkst                *ScheduleWkstEnum
+	Freq                *ScheduleFreqEnum
+	Interval            *int
+	Byday               *string
+	Byweekno            *string
+	Bymonthday          *string
+	Byyearday           *string
+	Description         *string
+	OpensAt             *time.Time
+	ClosesAt            *time.Time
+	ScheduleLink        *string
+	AttendingType       *string
+	Notes               *string
 }
 
-func FK_PhoneServiceID(serviceID string) PhoneOption {
-	return func(p *Phone) {
-		p.ServiceID = serviceID
-	}
-}
+func NewSchedule(opts *ScheduleOptions) (*Schedule, error) {
+	now := getICalTime()
+	id := newUUIDV4()
 
-func FK_PhoneOrganizationID(organizationID string) PhoneOption {
-	return func(p *Phone) {
-		p.OrganizationID = organizationID
-	}
-}
-
-func FK_ContactID(contactID string) PhoneOption {
-	return func(p *Phone) {
-		p.ContactID = contactID
-	}
-}
-
-func FK_PhoneServiceAtLocationID(serviceAtLocationID string) PhoneOption {
-	return func(p *Phone) {
-		p.ServiceAtLocationID = serviceAtLocationID
-	}
-}
-
-func WithExtension(extension float64) PhoneOption {
-	return func(p *Phone) {
-		p.Extension = extension
-	}
-}
-
-func WithType(phoneType string) PhoneOption {
-	return func(p *Phone) {
-		p.Type = phoneType
-	}
-}
-
-func WithPhoneDescription(description string) PhoneOption {
-	return func(p *Phone) {
-		p.Description = description
-	}
-}
-
-// Schedule Constructor
-
-type ScheduleOption func(*Schedule)
-
-func NewSchedule(id string, opts ...ScheduleOption) (*Schedule, error) {
-	if id == "" {
-		return nil, errors.New("id is required")
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
 	schedule := &Schedule{
-		ID: id,
+		CreatedAt: now,
+		UpdatedAt: now,
+		ID:        id,
 	}
 
-	for _, opt := range opts {
-		opt(schedule)
+	if opts != nil {
+		if opts.ServiceID != nil && !validateUUID(*opts.ServiceID) {
+			return nil, fmt.Errorf("invalid service ID format: must be UUIDv4")
+		}
+		if opts.LocationID != nil && !validateUUID(*opts.LocationID) {
+			return nil, fmt.Errorf("invalid location ID format: must be UUIDv4")
+		}
+		if opts.ServiceAtLocationID != nil && !validateUUID(*opts.ServiceAtLocationID) {
+			return nil, fmt.Errorf("invalid service at location ID format: must be UUIDv4")
+		}
+		schedule.ServiceID = opts.ServiceID
+		schedule.LocationID = opts.LocationID
+		schedule.ServiceAtLocationID = opts.ServiceAtLocationID
+		schedule.ValidFrom = opts.ValidFrom
+		schedule.ValidTo = opts.ValidTo
+		schedule.DTStart = opts.DTStart
+		schedule.Timezone = opts.Timezone
+		schedule.Until = opts.Until
+		schedule.Count = opts.Count
+		schedule.Wkst = opts.Wkst
+		schedule.Freq = opts.Freq
+		schedule.Interval = opts.Interval
+		schedule.Byday = opts.Byday
+		schedule.Byweekno = opts.Byweekno
+		schedule.Bymonthday = opts.Bymonthday
+		schedule.Byyearday = opts.Byyearday
+		schedule.Description = opts.Description
+		schedule.OpensAt = opts.OpensAt
+		schedule.ClosesAt = opts.ClosesAt
+		schedule.ScheduleLink = opts.ScheduleLink
+		schedule.AttendingType = opts.AttendingType
+		schedule.Notes = opts.Notes
 	}
 
 	return schedule, nil
 }
 
-func FK_SchedServiceID(serviceID string) ScheduleOption {
-	return func(s *Schedule) {
-		s.ServiceID = serviceID
-	}
+// ServiceCapacityOptions contains optional fields for creating a ServiceCapacity
+type ServiceCapacityOptions struct {
+	Maximum     *float64
+	Description *string
 }
 
-func FK_SchedLocationID(locationID string) ScheduleOption {
-	return func(s *Schedule) {
-		s.LocationID = locationID
+func NewServiceCapacity(serviceID, unitID string, available float64, opts *ServiceCapacityOptions) (*ServiceCapacity, error) {
+	if !validateUUID(serviceID) {
+		return nil, fmt.Errorf("invalid service ID format: must be UUIDv4")
 	}
-}
-
-func FK_SchedServiceAtLocationID(serviceAtLocationID string) ScheduleOption {
-	return func(s *Schedule) {
-		s.ServiceAtLocationID = serviceAtLocationID
-	}
-}
-
-func WithValidityPeriod(from, to time.Time) ScheduleOption {
-	return func(s *Schedule) {
-		s.ValidFrom = from
-		s.ValidTo = to
-	}
-}
-
-func WithDTStart(dtstart time.Time) ScheduleOption {
-	return func(s *Schedule) {
-		s.DTStart = dtstart
-	}
-}
-
-func WithTimezone(timezone float64) ScheduleOption {
-	return func(s *Schedule) {
-		s.Timezone = timezone
-	}
-}
-
-func WithUntil(until time.Time) ScheduleOption {
-	return func(s *Schedule) {
-		s.Until = until
-	}
-}
-
-func WithCount(count int) ScheduleOption {
-	return func(s *Schedule) {
-		s.Count = count
-	}
-}
-
-func WithWkst(wkst ScheduleWkstEnum) ScheduleOption {
-	return func(s *Schedule) {
-		s.Wkst = wkst
-	}
-}
-
-func WithFreq(freq ScheduleFreqEnum) ScheduleOption {
-	return func(s *Schedule) {
-		s.Freq = freq
-	}
-}
-
-func WithInterval(interval int) ScheduleOption {
-	return func(s *Schedule) {
-		s.Interval = interval
-	}
-}
-
-func WithByDay(byday string) ScheduleOption {
-	return func(s *Schedule) {
-		s.Byday = byday
-	}
-}
-
-func WithByWeekNo(byweekno string) ScheduleOption {
-	return func(s *Schedule) {
-		s.Byweekno = byweekno
-	}
-}
-
-func WithByMonthDay(bymonthday string) ScheduleOption {
-	return func(s *Schedule) {
-		s.Bymonthday = bymonthday
-	}
-}
-
-func WithByYearDay(byyearday string) ScheduleOption {
-	return func(s *Schedule) {
-		s.Byyearday = byyearday
-	}
-}
-
-func WithDescription(description string) ScheduleOption {
-	return func(s *Schedule) {
-		s.Description = description
-	}
-}
-
-func WithOpeningHours(opensAt, closesAt time.Time) ScheduleOption {
-	return func(s *Schedule) {
-		s.OpensAt = opensAt
-		s.ClosesAt = closesAt
-	}
-}
-
-func WithScheduleLink(link string) ScheduleOption {
-	return func(s *Schedule) {
-		s.ScheduleLink = link
-	}
-}
-
-func WithAttendingType(attendingType string) ScheduleOption {
-	return func(s *Schedule) {
-		s.AttendingType = attendingType
-	}
-}
-
-func WithNotes(notes string) ScheduleOption {
-	return func(s *Schedule) {
-		s.Notes = notes
-	}
-}
-
-// Service Capacity Constructor
-
-type ServiceCapacityOption func(*ServiceCapacity)
-
-func NewServiceCapacity(id, serviceID, unitID string, available float64, updated time.Time, opts ...ServiceCapacityOption) (*ServiceCapacity, error) {
-	if id == "" || serviceID == "" || unitID == "" {
-		return nil, errors.New("id, service_id, and unit_id are required fields")
+	if !validateUUID(unitID) {
+		return nil, fmt.Errorf("invalid unit ID format: must be UUIDv4")
 	}
 
-	sc := &ServiceCapacity{
+	now := getICalTime()
+	id := newUUIDV4()
+
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
+	}
+
+	serviceCapacity := &ServiceCapacity{
+		CreatedAt: now,
+		UpdatedAt: now,
 		ID:        id,
 		ServiceID: serviceID,
 		UnitID:    unitID,
 		Available: available,
-		Updated:   updated,
+		Updated:   now,
 	}
 
-	for _, opt := range opts {
-		opt(sc)
+	if opts != nil {
+		serviceCapacity.Maximum = opts.Maximum
+		serviceCapacity.Description = opts.Description
 	}
 
-	return sc, nil
+	return serviceCapacity, nil
 }
 
-func WithMaximum(max float64) ServiceCapacityOption {
-	return func(sc *ServiceCapacity) {
-		sc.Maximum = max
-	}
+// CostOptionOptions contains optional fields for creating a CostOption
+type CostOptionOptions struct {
+	ValidFrom         *time.Time
+	ValidTo           *time.Time
+	Option            *string
+	Currency          *string
+	Amount            *float64
+	AmountDescription *string
 }
 
-func WithCapacityDescription(desc string) ServiceCapacityOption {
-	return func(sc *ServiceCapacity) {
-		sc.Description = desc
+func NewCostOption(serviceID string, opts *CostOptionOptions) (*CostOption, error) {
+	if !validateUUID(serviceID) {
+		return nil, fmt.Errorf("invalid service ID format: must be UUIDv4")
 	}
-}
 
-// Cost Option Constructor
+	now := getICalTime()
+	id := newUUIDV4()
 
-type CostOptionOption func(*CostOption)
-
-func NewCostOption(id, serviceID string, opts ...CostOptionOption) (*CostOption, error) {
-	if id == "" || serviceID == "" {
-		return nil, errors.New("id and service_id are required fields")
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
 	costOption := &CostOption{
+		CreatedAt: now,
+		UpdatedAt: now,
 		ID:        id,
 		ServiceID: serviceID,
 	}
 
-	for _, opt := range opts {
-		opt(costOption)
+	if opts != nil {
+		costOption.ValidFrom = opts.ValidFrom
+		costOption.ValidTo = opts.ValidTo
+		costOption.Option = opts.Option
+		costOption.Currency = opts.Currency
+		costOption.Amount = opts.Amount
+		costOption.AmountDescription = opts.AmountDescription
 	}
 
 	return costOption, nil
 }
 
-func WithValidFrom(t time.Time) CostOptionOption {
-	return func(c *CostOption) {
-		c.ValidFrom = t
-	}
+// MetadataOptions contains all required fields for creating a Metadata
+type MetadataOptions struct {
+	ResourceType     string
+	LastActionType   string
+	FieldName        string
+	PreviousValue    string
+	ReplacementValue string
+	UpdatedBy        string
 }
 
-func WithValidTo(t time.Time) CostOptionOption {
-	return func(c *CostOption) {
-		c.ValidTo = t
-	}
-}
+// NewMetadata creates a new Metadata record with all required fields
+func NewMetadata(
+	resourceID string,
+	resourceType string,
+	lastActionType string,
+	fieldName string,
+	previousValue string,
+	replacementValue string,
+	updatedBy string,
+) (*Metadata, error) {
+	now := getICalTime()
+	id := newUUIDV4()
 
-func WithOption(opt string) CostOptionOption {
-	return func(c *CostOption) {
-		c.Option = opt
-	}
-}
-
-func WithCurrency(currency string) CostOptionOption {
-	return func(c *CostOption) {
-		c.Currency = currency
-	}
-}
-
-func WithAmount(amount float64) CostOptionOption {
-	return func(c *CostOption) {
-		c.Amount = amount
-	}
-}
-
-func WithAmountDescription(description string) CostOptionOption {
-	return func(c *CostOption) {
-		c.AmountDescription = description
-	}
-}
-
-// Metadata Constructor
-
-type MetadataOption func(*Metadata)
-
-func NewMetadata(id, resourceID, resourceType, lastActionType, fieldName, previousValue, replacementValue, updatedBy string, lastActionDate time.Time) (*Metadata, error) {
-	if id == "" || resourceID == "" || resourceType == "" || lastActionType == "" || fieldName == "" ||
-		previousValue == "" || replacementValue == "" || updatedBy == "" || lastActionDate.IsZero() {
-		return nil, errors.New("all fields are required")
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
 	metadata := &Metadata{
+		CreatedAt:        now,
+		UpdatedAt:        now,
 		ID:               id,
 		ResourceID:       resourceID,
 		ResourceType:     resourceType,
-		LastActionDate:   lastActionDate,
+		LastActionDate:   now,
 		LastActionType:   lastActionType,
 		FieldName:        fieldName,
 		PreviousValue:    previousValue,
@@ -1284,40 +1032,33 @@ func NewMetadata(id, resourceID, resourceType, lastActionType, fieldName, previo
 	return metadata, nil
 }
 
-// Meta Table Description Constructor
-
-type MetaTableDescriptionOption func(*MetaTableDescription)
-
-func NewMetaTableDescription(id string, opts ...MetaTableDescriptionOption) (*MetaTableDescription, error) {
-	if id == "" {
-		return nil, errors.New("id is required")
-	}
-
-	mtd := &MetaTableDescription{
-		ID: id,
-	}
-
-	for _, opt := range opts {
-		opt(mtd)
-	}
-
-	return mtd, nil
+// MetaTableDescriptionOptions contains optional fields for creating a MetaTableDescription
+type MetaTableDescriptionOptions struct {
+	Name         *string
+	Language     *string
+	CharacterSet *string
 }
 
-func WithName(name string) MetaTableDescriptionOption {
-	return func(m *MetaTableDescription) {
-		m.Name = name
-	}
-}
+// NewMetaTableDescription creates a new MetaTableDescription with optional fields
+func NewMetaTableDescription(opts *MetaTableDescriptionOptions) (*MetaTableDescription, error) {
+	now := getICalTime()
+	id := newUUIDV4()
 
-func WithMetaTableDescLanguage(language string) MetaTableDescriptionOption {
-	return func(m *MetaTableDescription) {
-		m.Language = language
+	if !validateUUID(id) {
+		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
-}
 
-func WithCharacterSet(characterSet string) MetaTableDescriptionOption {
-	return func(m *MetaTableDescription) {
-		m.CharacterSet = characterSet
+	metaTableDesc := &MetaTableDescription{
+		CreatedAt: now,
+		UpdatedAt: now,
+		ID:        id,
 	}
+
+	if opts != nil {
+		metaTableDesc.Name = opts.Name
+		metaTableDesc.Language = opts.Language
+		metaTableDesc.CharacterSet = opts.CharacterSet
+	}
+
+	return metaTableDesc, nil
 }

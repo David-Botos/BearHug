@@ -45,7 +45,6 @@ type OrganizationIdentifier struct {
 }
 
 type URL struct {
-	// Base fields for GORM
 	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
 	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
 
@@ -62,7 +61,6 @@ type URL struct {
 }
 
 type Funding struct {
-	// Base fields for GORM
 	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
 	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
 
@@ -78,7 +76,6 @@ type Funding struct {
 }
 
 type Unit struct {
-	// Base fields for GORM
 	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
 	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
 
@@ -91,7 +88,6 @@ type Unit struct {
 }
 
 type Program struct {
-	// Base fields for GORM
 	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
 	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
 
@@ -107,7 +103,6 @@ type Program struct {
 }
 
 type Service struct {
-	// Base fields for GORM
 	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
 	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
 
@@ -142,248 +137,332 @@ type Service struct {
 }
 
 type ServiceArea struct {
-    // Base fields for GORM
-    CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
-    UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
+	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
 
-    // Foreign Key Relationships
-    ServiceID            *string            `json:"service_id,omitempty" gorm:"type:varchar(250);foreignKey:ServiceID;references:ID"`
-    Service             Service            `gorm:"foreignKey:ServiceID;references:ID" json:"-"`
-    ServiceAtLocationID *string            `json:"service_at_location_id,omitempty" gorm:"type:varchar(250);foreignKey:ServiceAtLocationID;references:ID"`
-    ServiceAtLocation   ServiceAtLocation  `gorm:"foreignKey:ServiceAtLocationID;references:ID" json:"-"`
+	// Foreign Key Relationships
+	ServiceID           *string           `json:"service_id,omitempty" gorm:"type:varchar(250);foreignKey:ServiceID;references:ID"`
+	Service             Service           `gorm:"foreignKey:ServiceID;references:ID" json:"-"`
+	ServiceAtLocationID *string           `json:"service_at_location_id,omitempty" gorm:"type:varchar(250);foreignKey:ServiceAtLocationID;references:ID"`
+	ServiceAtLocation   ServiceAtLocation `gorm:"foreignKey:ServiceAtLocationID;references:ID" json:"-"`
 
-    // Service Area Data
-    ID          string         `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
-    Name        *string        `json:"name,omitempty" gorm:"type:text"`
-    Description *string        `json:"description,omitempty" gorm:"type:text"`
-    Extent      *string        `json:"extent,omitempty" gorm:"type:text"`
-    ExtentType  *ExtentTypeEnum `json:"extent_type,omitempty" gorm:"type:text"`
-    URI         *string        `json:"uri,omitempty" gorm:"type:text"`
+	// Service Area Data
+	ID          string          `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	Name        *string         `json:"name,omitempty" gorm:"type:text"`
+	Description *string         `json:"description,omitempty" gorm:"type:text"`
+	Extent      *string         `json:"extent,omitempty" gorm:"type:text"`
+	ExtentType  *ExtentTypeEnum `json:"extent_type,omitempty" gorm:"type:text"`
+	URI         *string         `json:"uri,omitempty" gorm:"type:text"`
 }
 
 type ServiceAtLocation struct {
+	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
+
 	// Foreign Key Relationships
-	ServiceID  string `json:"service_id" validate:"required" db:"service_id"`
-	LocationID string `json:"location_id" validate:"required" db:"location_id"`
+	ServiceID  string   `json:"service_id" gorm:"type:varchar(250);not null;foreignKey:ServiceID;references:ID" validate:"required"`
+	Service    Service  `gorm:"foreignKey:ServiceID;references:ID" json:"-"`
+	LocationID string   `json:"location_id" gorm:"type:varchar(250);not null;foreignKey:LocationID;references:ID" validate:"required"`
+	Location   Location `gorm:"foreignKey:LocationID;references:ID" json:"-"`
+
 	// ServiceAtLocation Data
-	ID          string `json:"id" validate:"required" db:"id"`
-	Description string `json:"description,omitempty" db:"description"`
+	ID          string  `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	Description *string `json:"description,omitempty" gorm:"type:text"`
 }
 
 type Location struct {
+	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
 	// Foreign Key Relationships
-	OrganizationID string `json:"organization_id,omitempty" db:"organization_id"`
+	OrganizationID *string       `json:"organization_id,omitempty" gorm:"type:varchar(250);column:organization_id;foreignKey:id"`
+	Organization   *Organization `json:"-" gorm:"foreignKey:OrganizationID;references:ID"`
 	// Location Data
-	ID                     string                   `json:"id" validate:"required" db:"id"`
-	LocationType           LocationLocationTypeEnum `json:"location_type" validate:"required" db:"location_type"`
-	URL                    string                   `json:"url,omitempty" db:"url"`
-	Name                   string                   `json:"name,omitempty" db:"name"`
-	AlternateName          string                   `json:"alternate_name,omitempty" db:"alternate_name"`
-	Description            string                   `json:"description,omitempty" db:"description"`
-	Transportation         string                   `json:"transportation,omitempty" db:"transportation"`
-	Latitude               float64                  `json:"latitude,omitempty" db:"latitude"`
-	Longitude              float64                  `json:"longitude,omitempty" db:"longitude"`
-	ExternalIdentifier     string                   `json:"external_identifier,omitempty" db:"external_identifier"`
-	ExternalIdentifierType string                   `json:"external_identifier_type,omitempty" db:"external_identifier_type"`
+	ID                     string                   `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	LocationType           LocationLocationTypeEnum `json:"location_type" gorm:"type:location_location_type_enum;not null" validate:"required"`
+	URL                    *string                  `json:"url,omitempty" gorm:"type:text"`
+	Name                   *string                  `json:"name,omitempty" gorm:"type:text"`
+	AlternateName          *string                  `json:"alternate_name,omitempty" gorm:"type:text"`
+	Description            *string                  `json:"description,omitempty" gorm:"type:text"`
+	Transportation         *string                  `json:"transportation,omitempty" gorm:"type:text"`
+	Latitude               *float64                 `json:"latitude,omitempty" gorm:"type:numeric"`
+	Longitude              *float64                 `json:"longitude,omitempty" gorm:"type:numeric"`
+	ExternalIdentifier     *string                  `json:"external_identifier,omitempty" gorm:"type:text"`
+	ExternalIdentifierType *string                  `json:"external_identifier_type,omitempty" gorm:"type:text"`
 }
 
 type Address struct {
+	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
+
 	// Foreign Key Relationships
-	LocationID string `json:"location_id,omitempty" db:"location_id"`
+	LocationID *string  `json:"location_id,omitempty" gorm:"type:varchar(250);foreignKey:LocationID;references:ID"`
+	Location   Location `gorm:"foreignKey:LocationID;references:ID" json:"-"`
 
 	// Address Data
-	ID            string                   `json:"id" validate:"required" db:"id"`
-	Attention     string                   `json:"attention,omitempty" db:"attention"`
-	Address1      string                   `json:"address_1" validate:"required" db:"address_1"`
-	Address2      string                   `json:"address_2,omitempty" db:"address_2"`
-	City          string                   `json:"city" validate:"required" db:"city"`
-	Region        string                   `json:"region,omitempty" db:"region"`
-	StateProvince string                   `json:"state_province" validate:"required" db:"state_province"`
-	PostalCode    string                   `json:"postal_code" validate:"required" db:"postal_code"`
-	Country       string                   `json:"country" validate:"required,len=2" db:"country"`
-	AddressType   LocationLocationTypeEnum `json:"address_type" validate:"required,oneof=physical postal virtual" db:"address_type"`
+	ID            string                   `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	Attention     *string                  `json:"attention,omitempty" gorm:"type:text"`
+	Address1      string                   `json:"address_1" gorm:"type:text;column:address_1;not null" validate:"required"`
+	Address2      *string                  `json:"address_2,omitempty" gorm:"type:text;column:address_2"`
+	City          string                   `json:"city" gorm:"type:text;not null" validate:"required"`
+	Region        *string                  `json:"region,omitempty" gorm:"type:text"`
+	StateProvince string                   `json:"state_province" gorm:"type:text;column:state_province;not null" validate:"required"`
+	PostalCode    string                   `json:"postal_code" gorm:"type:text;column:postal_code;not null" validate:"required"`
+	Country       string                   `json:"country" gorm:"type:text;not null" validate:"required,len=2"`
+	AddressType   LocationLocationTypeEnum `json:"address_type" gorm:"type:address_address_type_enum;column:address_type;not null" validate:"required,oneof=physical postal virtual"`
 }
 
 type RequiredDocument struct {
+	CreatedAt time.Time `gorm:"type:timestamp" json:"created_at"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"updated_at,omitempty"`
+
 	// Foreign Key Relationships
-	ServiceID string `db:"service_id" json:"service_id,omitempty"`
+	ServiceID *string `json:"service_id,omitempty" gorm:"type:varchar(250);foreignKey:ServiceID;references:ID"`
+	Service   Service `gorm:"foreignKey:ServiceID;references:ID" json:"-"`
+
 	// Required Document Data
-	ID        string    `db:"id" json:"id" validate:"required"`
-	Document  string    `db:"document" json:"document,omitempty"`
-	URI       string    `db:"uri" json:"uri,omitempty"`
-	CreatedAt time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt time.Time `db:"updated_at" json:"updated_at,omitempty"`
+	ID       string  `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	Document *string `json:"document,omitempty" gorm:"type:text"`
+	URI      *string `json:"uri,omitempty" gorm:"type:text"`
 }
 
 type Language struct {
+	CreatedAt time.Time `gorm:"type:timestamp" json:"created_at"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"updated_at"`
+
 	// Foreign Key Relationships
-	ServiceID  string `json:"service_id,omitempty" db:"service_id"`
-	LocationID string `json:"location_id,omitempty" db:"location_id"`
-	PhoneID    string `json:"phone_id,omitempty" db:"phone_id"`
+	ServiceID  *string  `json:"service_id,omitempty" gorm:"type:varchar(250);foreignKey:ServiceID;references:ID"`
+	Service    Service  `gorm:"foreignKey:ServiceID;references:ID" json:"-"`
+	LocationID *string  `json:"location_id,omitempty" gorm:"type:varchar(250);foreignKey:LocationID;references:ID"`
+	Location   Location `gorm:"foreignKey:LocationID;references:ID" json:"-"`
+	PhoneID    *string  `json:"phone_id,omitempty" gorm:"type:varchar(250);foreignKey:PhoneID;references:ID"`
+	Phone      Phone    `gorm:"foreignKey:PhoneID;references:ID" json:"-"`
 
 	// Language Data
-	ID        string    `json:"id" validate:"required" db:"id"`
-	Name      string    `json:"name,omitempty" db:"name"`
-	Code      string    `json:"code,omitempty" db:"code"`
-	Note      string    `json:"note,omitempty" db:"note"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+	ID   string  `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	Name *string `json:"name,omitempty" gorm:"type:text"`
+	Code *string `json:"code,omitempty" gorm:"type:text"`
+	Note *string `json:"note,omitempty" gorm:"type:text"`
 }
 
 type Accessibility struct {
+	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
+
 	// Foreign Key Relationship
-	LocationID string `json:"location_id,omitempty" db:"location_id"`
+	LocationID *string  `json:"location_id,omitempty" gorm:"type:varchar(250);foreignKey:LocationID;references:ID"`
+	Location   Location `gorm:"foreignKey:LocationID;references:ID" json:"-"`
 
 	// Accessibility Data
-	ID          string `json:"id" validate:"required" db:"id"`
-	Description string `json:"description,omitempty" db:"description"`
-	Details     string `json:"details,omitempty" db:"details"`
-	URL         string `json:"url,omitempty" db:"url"`
+	ID          string  `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	Description *string `json:"description,omitempty" gorm:"type:text"`
+	Details     *string `json:"details,omitempty" gorm:"type:text"`
+	URL         *string `json:"url,omitempty" gorm:"type:text"`
 }
 
 type Attribute struct {
+	CreatedAt time.Time `gorm:"type:timestamp" json:"created_at"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"updated_at,omitempty"`
+
 	// Foreign Key Relationship
-	TaxonomyTermID string `db:"taxonomy_term_id" json:"taxonomy_term_id" validate:"required"`
-	LinkID         string `db:"link_id" json:"link_id" validate:"required"`
+	TaxonomyTermID string       `json:"taxonomy_term_id" gorm:"type:varchar(250);not null;foreignKey:TaxonomyTermID;references:ID" validate:"required"`
+	TaxonomyTerm   TaxonomyTerm `gorm:"foreignKey:TaxonomyTermID;references:ID" json:"-"`
+
 	// Attribute Data
-	ID         string    `db:"id" json:"id" validate:"required"`
-	LinkType   string    `db:"link_type" json:"link_type,omitempty"`
-	LinkEntity string    `db:"link_entity" json:"link_entity" validate:"required"`
-	Value      string    `db:"value" json:"value,omitempty"`
-	Label      string    `db:"label" json:"label,omitempty"`
-	CreatedAt  time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt  time.Time `db:"updated_at" json:"updated_at,omitempty"`
+	ID         string  `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	LinkID     string  `json:"link_id" gorm:"type:text;not null" validate:"required"`
+	LinkType   *string `json:"link_type,omitempty" gorm:"type:text;column:link_type"`
+	LinkEntity string  `json:"link_entity" gorm:"type:text;not null" validate:"required"`
+	Value      *string `json:"value,omitempty" gorm:"type:text"`
+	Label      *string `json:"label,omitempty" gorm:"type:text"`
 }
 
 type Taxonomy struct {
-	ID          string `json:"id" validate:"required" db:"id"`
-	Name        string `json:"name" validate:"required" db:"name"`
-	Description string `json:"description" validate:"required" db:"description"`
-	URI         string `json:"uri,omitempty" db:"uri"`
-	Version     string `json:"version,omitempty" db:"version"`
+	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
+
+	// Taxonomy Data
+	ID          string  `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	Name        string  `json:"name" gorm:"type:text;not null" validate:"required"`
+	Description string  `json:"description" gorm:"type:text;not null" validate:"required"`
+	URI         *string `json:"uri,omitempty" gorm:"type:text"`
+	Version     *string `json:"version,omitempty" gorm:"type:text"`
 }
 
 type TaxonomyTerm struct {
-	// Foreign Key Relationship
-	TaxonomyID string `json:"taxonomy_id,omitempty" db:"taxonomy_id"`
-	ParentID   string `json:"parent_id,omitempty" db:"parent_id"`
+	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
+
+	// Foreign Key Relationships
+	TaxonomyID *string        `json:"taxonomy_id,omitempty" gorm:"type:varchar(250);foreignKey:TaxonomyID;references:ID"`
+	Taxonomy   Taxonomy       `gorm:"foreignKey:TaxonomyID;references:ID" json:"-"`
+	ParentID   *string        `json:"parent_id,omitempty" gorm:"type:text"`
+	Parent     *TaxonomyTerm  `gorm:"foreignKey:ParentID;references:ID" json:"-"`
+	Children   []TaxonomyTerm `gorm:"foreignKey:ParentID" json:"-"`
 
 	// TaxonomyTerm Data
-	ID          string `json:"id" validate:"required" db:"id"`
-	Code        string `json:"code,omitempty" db:"code"`
-	Name        string `json:"name" validate:"required" db:"name"`
-	Description string `json:"description" validate:"required" db:"description"`
-	Taxonomy    string `json:"taxonomy,omitempty" db:"taxonomy"`
-	Language    string `json:"language,omitempty" db:"language"`
-	TermURI     string `json:"term_uri,omitempty" db:"term_uri"`
+	ID          string  `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	Code        *string `json:"code,omitempty" gorm:"type:text;uniqueIndex"`
+	Name        string  `json:"name" gorm:"type:text;not null" validate:"required"`
+	Description string  `json:"description" gorm:"type:text;not null" validate:"required"`
+	TaxonomyStr *string `json:"taxonomy,omitempty" gorm:"type:text;column:taxonomy"` // Renamed to avoid conflict
+	Language    *string `json:"language,omitempty" gorm:"type:text"`
+	TermURI     *string `json:"term_uri,omitempty" gorm:"type:text;column:term_uri"`
 }
 
 type Contact struct {
+	CreatedAt time.Time `gorm:"type:timestamp" json:"created_at"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"updated_at,omitempty"`
+
 	// Foreign Key Relationships
-	OrganizationID      string `db:"organization_id" json:"organization_id,omitempty"`
-	ServiceID           string `db:"service_id" json:"service_id,omitempty"`
-	ServiceAtLocationID string `db:"service_at_location_id" json:"service_at_location_id,omitempty"`
-	LocationID          string `db:"location_id" json:"location_id,omitempty"`
+	OrganizationID *string      `json:"organization_id,omitempty" gorm:"type:varchar(250);foreignKey:OrganizationID;references:ID"`
+	Organization   Organization `gorm:"foreignKey:OrganizationID;references:ID" json:"-"`
+
+	ServiceID *string `json:"service_id,omitempty" gorm:"type:varchar(250);foreignKey:ServiceID;references:ID"`
+	Service   Service `gorm:"foreignKey:ServiceID;references:ID" json:"-"`
+
+	ServiceAtLocationID *string           `json:"service_at_location_id,omitempty" gorm:"type:varchar(250);foreignKey:ServiceAtLocationID;references:ID"`
+	ServiceAtLocation   ServiceAtLocation `gorm:"foreignKey:ServiceAtLocationID;references:ID" json:"-"`
+
+	LocationID *string  `json:"location_id,omitempty" gorm:"type:varchar(250);foreignKey:LocationID;references:ID"`
+	Location   Location `gorm:"foreignKey:LocationID;references:ID" json:"-"`
+
 	// Contact Data
-	ID         string    `db:"id" json:"id" validate:"required"`
-	Name       string    `db:"name" json:"name,omitempty"`
-	Title      string    `db:"title" json:"title,omitempty"`
-	Department string    `db:"department" json:"department,omitempty"`
-	Email      string    `db:"email" json:"email,omitempty"`
-	CreatedAt  time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt  time.Time `db:"updated_at" json:"updated_at,omitempty"`
+	ID         string  `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	Name       *string `json:"name,omitempty" gorm:"type:text"`
+	Title      *string `json:"title,omitempty" gorm:"type:text"`
+	Department *string `json:"department,omitempty" gorm:"type:text"`
+	Email      *string `json:"email,omitempty" gorm:"type:text"`
 }
 
 type Phone struct {
-	//Foreign Key Relationships
-	LocationID          string `json:"location_id,omitempty" db:"location_id"`
-	ServiceID           string `json:"service_id,omitempty" db:"service_id"`
-	OrganizationID      string `json:"organization_id,omitempty" db:"organization_id"`
-	ContactID           string `json:"contact_id,omitempty" db:"contact_id"`
-	ServiceAtLocationID string `json:"service_at_location_id,omitempty" db:"service_at_location_id"`
+	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
 
-	//Phone Data
-	ID          string  `json:"id" validate:"required" db:"id"`
-	Number      string  `json:"number" validate:"required" db:"number"`
-	Extension   float64 `json:"extension,omitempty" db:"extension"`
-	Type        string  `json:"type,omitempty" db:"type"`
-	Description string  `json:"description,omitempty" db:"description"`
+	// Foreign Key Relationships
+	LocationID *string  `json:"location_id,omitempty" gorm:"type:varchar(250);foreignKey:LocationID;references:ID"`
+	Location   Location `gorm:"foreignKey:LocationID;references:ID" json:"-"`
+
+	ServiceID *string `json:"service_id,omitempty" gorm:"type:varchar(250);foreignKey:ServiceID;references:ID"`
+	Service   Service `gorm:"foreignKey:ServiceID;references:ID" json:"-"`
+
+	OrganizationID *string      `json:"organization_id,omitempty" gorm:"type:varchar(250);foreignKey:OrganizationID;references:ID"`
+	Organization   Organization `gorm:"foreignKey:OrganizationID;references:ID" json:"-"`
+
+	ContactID *string `json:"contact_id,omitempty" gorm:"type:varchar(250);foreignKey:ContactID;references:ID"`
+	Contact   Contact `gorm:"foreignKey:ContactID;references:ID" json:"-"`
+
+	ServiceAtLocationID *string           `json:"service_at_location_id,omitempty" gorm:"type:varchar(250);foreignKey:ServiceAtLocationID;references:ID"`
+	ServiceAtLocation   ServiceAtLocation `gorm:"foreignKey:ServiceAtLocationID;references:ID" json:"-"`
+
+	// Phone Data
+	ID          string   `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	Number      string   `json:"number" gorm:"type:text;not null" validate:"required"`
+	Extension   *float64 `json:"extension,omitempty" gorm:"type:numeric"`
+	Type        *string  `json:"type,omitempty" gorm:"type:text"`
+	Description *string  `json:"description,omitempty" gorm:"type:text"`
 }
 
 type Schedule struct {
-	// Foreign Key Relationship
-	ServiceID           string `json:"service_id,omitempty" db:"service_id"`
-	LocationID          string `json:"location_id,omitempty" db:"location_id"`
-	ServiceAtLocationID string `json:"service_at_location_id,omitempty" db:"service_at_location_id"`
+	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
+
+	// Foreign Key Relationships
+	ServiceID *string `json:"service_id,omitempty" gorm:"type:varchar(250);foreignKey:ServiceID;references:ID"`
+	Service   Service `gorm:"foreignKey:ServiceID;references:ID" json:"-"`
+
+	LocationID *string  `json:"location_id,omitempty" gorm:"type:varchar(250);foreignKey:LocationID;references:ID"`
+	Location   Location `gorm:"foreignKey:LocationID;references:ID" json:"-"`
+
+	ServiceAtLocationID *string           `json:"service_at_location_id,omitempty" gorm:"type:varchar(250);foreignKey:ServiceAtLocationID;references:ID"`
+	ServiceAtLocation   ServiceAtLocation `gorm:"foreignKey:ServiceAtLocationID;references:ID" json:"-"`
 
 	// Schedule Data
-	ID            string           `json:"id" validate:"required" db:"id"`
-	ValidFrom     time.Time        `json:"valid_from,omitempty" db:"valid_from"`
-	ValidTo       time.Time        `json:"valid_to,omitempty" db:"valid_to"`
-	DTStart       time.Time        `json:"dtstart,omitempty" db:"dtstart"`
-	Timezone      float64          `json:"timezone,omitempty" db:"timezone"`
-	Until         time.Time        `json:"until,omitempty" db:"until"`
-	Count         int              `json:"count,omitempty" db:"count"`
-	Wkst          ScheduleWkstEnum `json:"wkst,omitempty" db:"wkst"`
-	Freq          ScheduleFreqEnum `json:"freq,omitempty" db:"freq"`
-	Interval      int              `json:"interval,omitempty" db:"interval"`
-	Byday         string           `json:"byday,omitempty" db:"byday"`
-	Byweekno      string           `json:"byweekno,omitempty" db:"byweekno"`
-	Bymonthday    string           `json:"bymonthday,omitempty" db:"bymonthday"`
-	Byyearday     string           `json:"byyearday,omitempty" db:"byyearday"`
-	Description   string           `json:"description,omitempty" db:"description"`
-	OpensAt       time.Time        `json:"opens_at,omitempty" db:"opens_at"`
-	ClosesAt      time.Time        `json:"closes_at,omitempty" db:"closes_at"`
-	ScheduleLink  string           `json:"schedule_link,omitempty" db:"schedule_link"`
-	AttendingType string           `json:"attending_type,omitempty" db:"attending_type"`
-	Notes         string           `json:"notes,omitempty" db:"notes"`
+	ID            string            `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	ValidFrom     *time.Time        `json:"valid_from,omitempty" gorm:"type:date"`
+	ValidTo       *time.Time        `json:"valid_to,omitempty" gorm:"type:date"`
+	DTStart       *time.Time        `json:"dtstart,omitempty" gorm:"type:date;column:dtstart"`
+	Timezone      *float64          `json:"timezone,omitempty" gorm:"type:numeric"`
+	Until         *time.Time        `json:"until,omitempty" gorm:"type:date"`
+	Count         *int              `json:"count,omitempty" gorm:"type:numeric"`
+	Wkst          *ScheduleWkstEnum `json:"wkst,omitempty" gorm:"type:schedule_wkst_enum"`
+	Freq          *ScheduleFreqEnum `json:"freq,omitempty" gorm:"type:schedule_freq_enum"`
+	Interval      *int              `json:"interval,omitempty" gorm:"type:numeric;column:interval"`
+	Byday         *string           `json:"byday,omitempty" gorm:"type:text"`
+	Byweekno      *string           `json:"byweekno,omitempty" gorm:"type:text"`
+	Bymonthday    *string           `json:"bymonthday,omitempty" gorm:"type:text"`
+	Byyearday     *string           `json:"byyearday,omitempty" gorm:"type:text"`
+	Description   *string           `json:"description,omitempty" gorm:"type:text"`
+	OpensAt       *time.Time        `json:"opens_at,omitempty" gorm:"type:time without time zone"`
+	ClosesAt      *time.Time        `json:"closes_at,omitempty" gorm:"type:time without time zone"`
+	ScheduleLink  *string           `json:"schedule_link,omitempty" gorm:"type:text"`
+	AttendingType *string           `json:"attending_type,omitempty" gorm:"type:text"`
+	Notes         *string           `json:"notes,omitempty" gorm:"type:text"`
 }
 
 type ServiceCapacity struct {
-	// Foreign Key Relationship
-	ServiceID string `db:"service_id" json:"service_id" validate:"required"`
-	UnitID    string `db:"unit_id" json:"unit_id" validate:"required"`
+	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
+
+	// Foreign Key Relationships
+	ServiceID string  `json:"service_id" gorm:"type:varchar(250);not null;foreignKey:ServiceID;references:ID" validate:"required"`
+	Service   Service `json:"-" gorm:"constraint:OnUpdate:CASCADE,OnDelete:RESTRICT"`
+
+	UnitID string `json:"unit_id" gorm:"type:varchar(250);not null;foreignKey:UnitID;references:ID" validate:"required"`
+	Unit   Unit   `json:"-" gorm:"constraint:OnUpdate:CASCADE,OnDelete:RESTRICT"`
+
 	// Service Capacity Data
-	ID          string    `db:"id" json:"id" validate:"required"`
-	Available   float64   `db:"available" json:"available" validate:"required"`
-	Maximum     float64   `db:"maximum" json:"maximum,omitempty"`
-	Description string    `db:"description" json:"description,omitempty"`
-	Updated     time.Time `db:"updated" json:"updated" validate:"required"`
+	ID          string    `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	Available   float64   `json:"available" gorm:"type:numeric;not null" validate:"required"`
+	Maximum     *float64  `json:"maximum,omitempty" gorm:"type:numeric"`
+	Description *string   `json:"description,omitempty" gorm:"type:text"`
+	Updated     time.Time `json:"updated" gorm:"type:timestamp;not null" validate:"required"`
 }
 
 type CostOption struct {
+	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
+
 	// Foreign Key Relationships
-	ServiceID string `json:"service_id" validate:"required" db:"service_id"`
+	ServiceID string  `json:"service_id" gorm:"type:varchar(250);not null;foreignKey:ServiceID;references:ID" validate:"required"`
+	Service   Service `json:"-" gorm:"constraint:OnUpdate:CASCADE,OnDelete:RESTRICT"`
 
 	// CostOption Data
-	ID                string    `json:"id" validate:"required" db:"id"`
-	ValidFrom         time.Time `json:"valid_from,omitempty" db:"valid_from"`
-	ValidTo           time.Time `json:"valid_to,omitempty" db:"valid_to"`
-	Option            string    `json:"option,omitempty" db:"option"`
-	Currency          string    `json:"currency,omitempty" db:"currency"`
-	Amount            float64   `json:"amount,omitempty" db:"amount"`
-	AmountDescription string    `json:"amount_description,omitempty" db:"amount_description"`
+	ID                string     `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	ValidFrom         *time.Time `json:"valid_from,omitempty" gorm:"type:date"`
+	ValidTo           *time.Time `json:"valid_to,omitempty" gorm:"type:date"`
+	Option            *string    `json:"option,omitempty" gorm:"type:text"`
+	Currency          *string    `json:"currency,omitempty" gorm:"type:text"`
+	Amount            *float64   `json:"amount,omitempty" gorm:"type:numeric"`
+	AmountDescription *string    `json:"amount_description,omitempty" gorm:"type:text"`
 }
 
 type Metadata struct {
-	// Foreign Key Relationship
-	ResourceID string `db:"resource_id" json:"resource_id" validate:"required"`
+	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
+
+	// Resource Reference
+	ResourceID string `json:"resource_id" gorm:"type:text;not null" validate:"required"`
+
 	// Metadata Data
-	ID               string    `db:"id" json:"id" validate:"required"`
-	ResourceType     string    `db:"resource_type" json:"resource_type" validate:"required"`
-	LastActionDate   time.Time `db:"last_action_date" json:"last_action_date" validate:"required"`
-	LastActionType   string    `db:"last_action_type" json:"last_action_type" validate:"required"`
-	FieldName        string    `db:"field_name" json:"field_name" validate:"required"`
-	PreviousValue    string    `db:"previous_value" json:"previous_value" validate:"required"`
-	ReplacementValue string    `db:"replacement_value" json:"replacement_value" validate:"required"`
-	UpdatedBy        string    `db:"updated_by" json:"updated_by" validate:"required"`
+	ID               string    `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	ResourceType     string    `json:"resource_type" gorm:"type:text;not null" validate:"required"`
+	LastActionDate   time.Time `json:"last_action_date" gorm:"type:date;not null" validate:"required"`
+	LastActionType   string    `json:"last_action_type" gorm:"type:text;not null" validate:"required"`
+	FieldName        string    `json:"field_name" gorm:"type:text;not null" validate:"required"`
+	PreviousValue    string    `json:"previous_value" gorm:"type:text;not null" validate:"required"`
+	ReplacementValue string    `json:"replacement_value" gorm:"type:text;not null" validate:"required"`
+	UpdatedBy        string    `json:"updated_by" gorm:"type:text;not null" validate:"required"`
 }
 
 type MetaTableDescription struct {
-	ID           string `json:"id" validate:"required" db:"id"`
-	Name         string `json:"name,omitempty" db:"name"`
-	Language     string `json:"language,omitempty" db:"language"`
-	CharacterSet string `json:"character_set,omitempty" db:"character_set"`
+	CreatedAt time.Time `gorm:"type:timestamp" json:"-"`
+	UpdatedAt time.Time `gorm:"type:timestamp" json:"-"`
+
+	// MetaTableDescription Data
+	ID           string  `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	Name         *string `json:"name,omitempty" gorm:"type:text"`
+	Language     *string `json:"language,omitempty" gorm:"type:text"`
+	CharacterSet *string `json:"character_set,omitempty" gorm:"type:text;column:character_set"`
 }
 
 //// -- Enum Utilities -- ////

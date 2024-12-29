@@ -1,4 +1,3 @@
-// Correct the enum usage
 package hsds_types
 
 import (

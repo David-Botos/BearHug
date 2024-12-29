@@ -1,4 +1,4 @@
-# AI Voice Bot
+# AI Voice Bot & AI Structured Data Extraction
 
 A real-time voice conversation bot built with Pipecat that can handle phone calls via Daily. 
 
@@ -6,14 +6,31 @@ The bot uses Deepgram for STT (possibly unimplemented), Claude for conversation 
 
 ## 📁 Project Structure
 ```
-.
-└── src/
-    ├── analysis.py   # Logic and calls for transcript analysis and storage (INCOMPLETE)
-    ├── bot.py        # Primary bot configuration (INCOMPLETE)
-    ├── prompt.py     # Prompt storage and generation function
-    ├── runner.py     # Configuration and runtime setup
-    ├── server.py     # FastAPI server for bot management
-    └── supabase.py   # Supabase client setup
+├── README
+└── services
+    ├── analysis                        ## AI Analysis Microservice
+    │   ├── cmd
+    │   │   └── main.go                 ## Main Go API server & Routine manager
+    │   ├── go.mod
+    │   ├── go.sum
+    │   ├── internal
+    │   │   └── hsds_types
+    │   │       ├── constructors.go     ##  Go Constructors for the HSDS Schema
+    │   │       └── types.go            ##  Go Structs for the HSDS Schema
+    │   └── pkg
+    │       └── hsds.sql                ## HSDS PostgreSQL database dump
+    └── call                            ## Voice Agent Microservice
+        ├── requirements.txt
+        ├── src
+        │   ├── bot.py                  ## Voice agent subprocess
+        │   ├── prompt.py               ## Prompt details and generation function
+        │   ├── runner.py               ## Configuration for each voice agent
+        │   └── server.py               ## Python API server
+        └── venv
+            └── bin
+                ├── activate            ## Run this to activate the python vEnv
+                └── ...
+
 ```
 
 ## 🚀 Getting Started

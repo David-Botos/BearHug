@@ -1,3 +1,5 @@
+github.com/Oudwins/zog v0.13.0 h1:IrISUjAIfLSYJdOoLFt3+FCOfqtZFvn64jrWwYsATAs=
+github.com/Oudwins/zog v0.13.0/go.mod h1:c4ADJ2zNkJp37ZViNy1o3ZZoeMvO7UQVO7BaPtRoocg=
 github.com/go-viper/mapstructure/v2 v2.2.1 h1:ZAaOCxANMuZx5RCeg0mBdEZk7DZasvvZIxtHqx8aGss=
 github.com/go-viper/mapstructure/v2 v2.2.1/go.mod h1:oJDH3BJKyqBA2TXFhDsKDGDTlndYOZ6rGS0BRZIxGhM=
 github.com/google/go-cmp v0.5.2/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
@@ -21,4 +23,6 @@ github.com/supabase-community/supabase-go v0.0.4 h1:sxMenbq6N8a3z9ihNpN3lC2FL3E1
 github.com/supabase-community/supabase-go v0.0.4/go.mod h1:SSHsXoOlc+sq8XeXaf0D3gE2pwrq5bcUfzm0+08u/o8=
 github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80 h1:nrZ3ySNYwJbSpD6ce9duiP+QkD3JuLCcWkdaehUS/3Y=
 github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80/go.mod h1:iFyPdL66DjUD96XmzVL3ZntbzcflLnznH0fr99w5VqE=
+golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8 h1:yixxcjnhBmY0nkL253HFVIm0JsFHwrHdT3Yh6szTnfY=
+golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8/go.mod h1:jj3sYF3dwk5D+ghuXyeI3r5MFf+NT2An6/9dOA95KSI=
 golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=

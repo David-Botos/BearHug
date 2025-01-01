@@ -14,4 +14,5 @@ require (
 	github.com/supabase-community/storage-go v0.7.0 // indirect
 	github.com/supabase-community/supabase-go v0.0.4 // indirect
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80 // indirect
+	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8 // indirect
 )

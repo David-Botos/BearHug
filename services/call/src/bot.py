@@ -38,7 +38,7 @@ class CallState:
         self.participant_id: Optional[str] = None
 
 def get_transcript_from_context(context) -> str:
-    """Extract the conversation transcript from the AnthropicLLMContext"""
+    # Extract the conversation transcript from the AnthropicLLMContext
     transcript_lines = []
     
     # Access the messages directly from the context
@@ -66,7 +66,7 @@ def get_transcript_from_context(context) -> str:
     return "\n".join(transcript_lines)
 
 async def send_final_transcript(transcript: str):
-    """Send final transcript to stdout for server to capture"""
+    # Send final transcript to stdout for server to capture
     print(f"TRANSCRIPT_UPDATE:{transcript}")
 
 async def main():

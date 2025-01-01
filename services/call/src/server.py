@@ -214,7 +214,7 @@ async def cleanup_process(room_url: str):
 
 @app.post("/daily_start_bot")
 async def daily_start_bot(request: Request) -> JSONResponse:
-    """Main webhook endpoint"""
+    # Main webhook endpoint
     try:
         data = await request.json()
         if "test" in data:

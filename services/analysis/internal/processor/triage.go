@@ -65,4 +65,3 @@ Remember:
 	return prompt
 }
 
-// I want your help to write a package called ‘inference' in Go. This package will be used internally within a larger Go project. We will be writing claude.go which will create two primary functions called NewClient and RunClaudeInference, and whatever other functions are deemed necessary to achieve the objective of providing a simple interface that abstracts the API interaction with anthropics api. I should be

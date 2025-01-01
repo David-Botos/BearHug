@@ -1,0 +1,158 @@
+# AI Voice Bot & AI Structured Data Extraction
+
+A real-time voice conversation bot built with Pipecat that can handle phone calls via Daily. 
+
+The bot uses Deepgram for STT (possibly unimplemented), Claude for conversation intelligence and ElevenLabs for voice synthesis.
+
+## 📁 Project Structure
+```
+├── README
+└── services
+    ├── analysis                        ## AI Analysis Microservice
+    │   ├── cmd
+    │   │   └── main.go                 ## Main Go API server & Routine manager
+    │   ├── go.mod
+    │   ├── go.sum
+    │   ├── internal
+    │   │   └── hsds_types
+    │   │       ├── constructors.go     ##  Go Constructors for the HSDS Schema
+    │   │       └── types.go            ##  Go Structs for the HSDS Schema
+    │   └── pkg
+    │       └── hsds.sql                ## HSDS PostgreSQL database dump
+    └── call                            ## Voice Agent Microservice
+        ├── requirements.txt
+        ├── src
+        │   ├── bot.py                  ## Voice agent subprocess
+        │   ├── prompt.py               ## Prompt details and generation function
+        │   ├── runner.py               ## Configuration for each voice agent
+        │   └── server.py               ## Python API server
+        └── venv
+            └── bin
+                ├── activate            ## Run this to activate the python vEnv
+                └── ...
+
+```
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Python 3.12 or higher
+- Docker (optional) (INCOMPLETE)
+- API Keys:
+  - Daily.co account and API key
+  - Deepgram API key (INCOMPLETE)
+  - ElevenLabs API key 
+  - ElevenLabs voice ID
+  - Anthropic API key
+  - Canonical API key (optional, for metrics) (INCOMPLETE)
+
+### 🛠️ Installation
+
+#### 📥 Local Installation
+
+1. Clone the repository and navigate to the project directory:
+```bash
+git clone -b pipecat https://github.com/David-Botos/BearHug.git
+cd BearHug
+```
+
+2. Create a virtual environment:
+```bash
+python -m venv env
+```
+
+3. Activate the virtual environment:
+```bash
+# On Unix/macOS
+source env/bin/activate
+
+# On Windows (havent tested this)
+.\env\Scripts\activate
+```
+
+4. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+5. Create a `.env` file in the project root:
+```env
+DAILY_API_KEY=your_daily_api_key
+ELEVENLABS_API_KEY=your_elevenlabs_api_key
+ELEVENLABS_VOICE_ID=your_voice_id
+ANTHROPIC_API_KEY=your_anthropic_api_key
+DEEPGRAM_API_KEY=your_deepgram_api_key  # INCOMPLETE
+CANONICAL_API_KEY=your_canonical_api_key  # INCOMPLETE
+```
+
+#### 🚀 Local Development
+
+1. Start the server from the src directory:
+```bash
+python src/server.py
+```
+
+2. The server will start on `http://localhost:7860`
+
+3. Visit bots.daily.co and get a phone number, you could also do this programmatically at these endpoints:
+    - https://api.daily.co/v1/list-available-numbers?region=WA&city=Seattle
+    - https://api.daily.co/v1/buy-phone-number
+    - https://api.daily.co/v1/purchased-phone-numbers
+
+    Documentation: https://docs.daily.co/reference/rest-api/phone-numbers
+
+4. Set up ngrok to point to your localhost, exposing the port to Daily's webhook:
+```bash
+ngrok http localhost:7860
+```
+
+5. Configure the phone number to point to the ngrok url with the FastAPI slug to start the server ("/daily_start_bot")
+
+6. Watch it break, beacuse its not done yet 🐒 🦧
+
+## 📄 License
+
+# License
+
+                                 Apache License
+                           Version 2.0, January 2004
+                        http://www.apache.org/licenses/
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+## Copyright
+
+Copyright [2024] David Botos
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+## Third Party Components
+
+This software includes the following third-party components:
+[List any third-party components here with their respective licenses]
+
+## NOTICE
+
+BearHug ʕ•ᴥ•ʔ
+Copyright [2024] David Botos

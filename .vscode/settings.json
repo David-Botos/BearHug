@@ -1,0 +1,4 @@
+{
+    "python.defaultInterpreterPath": "${workspaceFolder}/services/call/venv/bin/python",
+    "python.analysis.extraPaths": ["${workspaceFolder}/services/call/venv/lib/python3.12/site-packages"]
+}

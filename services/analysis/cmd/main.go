@@ -53,6 +53,7 @@ func handleTranscript(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Store transcript asynchronously
+	// TODO: make this not suck by adding a handler
 	go func() {
 		if err := storage.StoreCallData(callData); err != nil {
 			log.Printf("Error storing transcript: %v", err)
@@ -60,9 +61,13 @@ func handleTranscript(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	// Process transcript asynchronously
+	// TODO: make this not suck by adding a handler
 	go func() {
-		if err := processor.ProcessTranscript(dataForAnalysis); err != nil {
+		if result, err := processor.ProcessTranscript(dataForAnalysis); err != nil {
 			log.Printf("Error processing transcript: %v", err)
+		} else if result {
+			// TODO: Actually handle result
+			log.Printf("result true")
 		}
 	}()
 

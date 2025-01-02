@@ -115,14 +115,15 @@ type TriageOutput struct {
 
 // tablePromptMap maps table types to their corresponding prompt generation functions
 var tablePromptMap = map[TableName]func(transcript string, reasoning string) (string, interface{}){
-	ServicesTable:         services.GenerateServicesPrompt,
-	ServiceCapacityTable:  generateServiceCapacityPrompt,
-	UnitTable:             generateUnitPrompt,
-	ScheduleTable:         generateSchedulePrompt,
-	ProgramTable:          generateProgramPrompt,
-	RequiredDocumentTable: generateRequiredDocumentPrompt,
-	ContactTable:          generateContactPrompt,
-	PhoneTable:            generatePhonePrompt,
+	ServicesTable: services.GenerateServicesPrompt,
+	// TODO:
+	// ServiceCapacityTable:  services.GenerateServiceCapacityPrompt,
+	// UnitTable:             generateUnitPrompt,
+	// ScheduleTable:         generateSchedulePrompt,
+	// ProgramTable:          generateProgramPrompt,
+	// RequiredDocumentTable: generateRequiredDocumentPrompt,
+	// ContactTable:          generateContactPrompt,
+	// PhoneTable:            generatePhonePrompt,
 }
 
 // ProcessTriageData processes the detected tables and reasoning to generate corresponding prompts and schemas

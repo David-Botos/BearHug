@@ -3,6 +3,8 @@ package triage
 import (
 	"fmt"
 	"strings"
+
+	"github.com/david-botos/BearHug/services/analysis/internal/processor/services"
 )
 
 // TableName represents valid table names in the system
@@ -101,4 +103,53 @@ func GenerateTriagePrompt(transcript string) string {
 		strings.Join(tableDescriptionStrings, "\n"),
 		transcript)
 	return prompt
+}
+
+// TriageOutput represents the structured output containing detected tables, reasoning, and generated prompts
+type TriageOutput struct {
+	DetectedTables []string      `json:"detected_tables"`
+	Reasoning      []string      `json:"reasoning"`
+	Prompts        []string      `json:"prompts"`
+	Schemas        []interface{} `json:"schemas"`
+}
+
+// tablePromptMap maps table types to their corresponding prompt generation functions
+var tablePromptMap = map[TableName]func(transcript string, reasoning string) (string, interface{}){
+	ServicesTable:         services.GenerateServicesPrompt,
+	ServiceCapacityTable:  generateServiceCapacityPrompt,
+	UnitTable:             generateUnitPrompt,
+	ScheduleTable:         generateSchedulePrompt,
+	ProgramTable:          generateProgramPrompt,
+	RequiredDocumentTable: generateRequiredDocumentPrompt,
+	ContactTable:          generateContactPrompt,
+	PhoneTable:            generatePhonePrompt,
+}
+
+// ProcessTriageData processes the detected tables and reasoning to generate corresponding prompts and schemas
+func ProcessTriageData(transcript string, detectedTables []string, reasoning []string) (*TriageOutput, error) {
+	if len(detectedTables) != len(reasoning) {
+		return nil, fmt.Errorf("mismatch between detected tables (%d) and reasoning (%d) lengths",
+			len(detectedTables), len(reasoning))
+	}
+
+	output := &TriageOutput{
+		DetectedTables: detectedTables,
+		Reasoning:      reasoning,
+		Prompts:        make([]string, 0, len(detectedTables)),
+		Schemas:        make([]interface{}, 0, len(detectedTables)),
+	}
+
+	for i, table := range detectedTables {
+		tableType := TableName(table)
+		promptFunc, exists := tablePromptMap[tableType]
+		if !exists {
+			return nil, fmt.Errorf("invalid table type: %s", table)
+		}
+
+		prompt, schema := promptFunc(transcript, reasoning[i])
+		output.Prompts = append(output.Prompts, prompt)
+		output.Schemas = append(output.Schemas, schema)
+	}
+
+	return output, nil
 }

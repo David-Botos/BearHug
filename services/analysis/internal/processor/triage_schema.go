@@ -6,7 +6,7 @@ func NewTriageSchema() ToolInputSchema {
 		Properties: map[string]Property{
 			"detected_tables": {
 				Type:        "array",
-				Description: "Valid table names in the system",
+				Description: "Array of valid table names in the system",
 				Items: map[string]interface{}{
 					"type": "string",
 					"enum": []string{
@@ -19,12 +19,16 @@ func NewTriageSchema() ToolInputSchema {
 						string(ContactTable),
 						string(PhoneTable),
 					},
-					"description": "Valid table names in the system",
+					"description": "Valid table name",
 				},
 			},
 			"reasoning": {
-				Type:        "string",
-				Description: "Explanation of why each table was selected",
+				Type:        "array",
+				Description: "Array of explanations where each index maps directly to the table at the same index in detected_tables",
+				Items: map[string]interface{}{
+					"type":        "string",
+					"description": "Explanation for why the corresponding table in detected_tables was selected, including specific evidence from the transcript",
+				},
 			},
 		},
 		Required: []string{"detected_tables", "reasoning"},

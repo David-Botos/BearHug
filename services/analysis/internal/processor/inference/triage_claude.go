@@ -1,4 +1,4 @@
-package processor
+package inference
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 	"reflect"
 )
 
-type TriagePromptParams struct {
+type PromptParams struct {
 	Prompt string          `json:"prompt"`
 	Schema ToolInputSchema `json:"schema"`
 }
@@ -128,7 +128,7 @@ func validateAgainstSchema(data interface{}, schema ToolInputSchema) error {
 }
 
 // RunClaudeInference performs inference with structured output validation
-func (c *ClaudeClient) RunClaudeInference(params TriagePromptParams) (map[string]interface{}, error) {
+func (c *ClaudeClient) RunClaudeInference(params PromptParams) (map[string]interface{}, error) {
 	// Create request body
 	reqBody := TriagePromptRequest{
 		Model:     "claude-3-5-sonnet-20241022",

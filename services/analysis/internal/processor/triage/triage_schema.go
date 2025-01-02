@@ -1,9 +1,11 @@
-package processor
+package triage
 
-func NewTriageSchema() ToolInputSchema {
-	return ToolInputSchema{
+import "github.com/david-botos/BearHug/services/analysis/internal/processor/inference"
+
+func NewTriageSchema() inference.ToolInputSchema {
+	return inference.ToolInputSchema{
 		Type: "object",
-		Properties: map[string]Property{
+		Properties: map[string]inference.Property{
 			"detected_tables": {
 				Type:        "array",
 				Description: "Array of valid table names in the system",

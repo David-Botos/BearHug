@@ -1,4 +1,4 @@
-package processor
+package inference
 
 import "net/http"
 

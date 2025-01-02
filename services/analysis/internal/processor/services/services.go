@@ -31,89 +31,89 @@ Guidelines for extraction:
 - Note any documentation requirements (like government ID) in the application_process field
 
 IMPORTANT: You must ONLY respond by using the extract_services tool to output the structured data. Do not provide any explanatory text, confirmations, or additional messages. Simply use the tool to output the structured data following the schema exactly. Only include information that was explicitly discussed - do not make assumptions or add details not present in the transcript.`, transcript, reasoning)
-	return prompt, NewServicesSchema()
+	return prompt, ServicesSchema
 }
 
-func NewServicesSchema() inference.ToolInputSchema {
-	return inference.ToolInputSchema{
-		Type: "object",
-		Properties: map[string]inference.Property{
-			"new_services": {
-				Type:        "array",
-				Description: "Array of new services identified in the conversation",
-				Items: map[string]interface{}{
-					"type": "object",
-					"properties": map[string]interface{}{
-						"organization_id": map[string]interface{}{
-							"type":        "string",
-							"description": "UUID v4 of the organization offering the service",
-						},
-						"name": map[string]interface{}{
-							"type":        "string",
-							"description": "Primary name of the service",
-						},
-						"status": map[string]interface{}{
-							"type":        "string",
-							"description": "Current operational status of the service",
-							"enum":        []string{"active", "inactive", "defunct"},
-						},
-						"program_id": map[string]interface{}{
-							"type":        "string",
-							"description": "Optional UUID v4 of the program this service belongs to",
-						},
-						"alternate_name": map[string]interface{}{
-							"type":        "string",
-							"description": "Alternative name or abbreviation for the service",
-						},
-						"description": map[string]interface{}{
-							"type":        "string",
-							"description": "Detailed description of what the service provides",
-						},
-						"url": map[string]interface{}{
-							"type":        "string",
-							"description": "Website or webpage for the service",
-						},
-						"email": map[string]interface{}{
-							"type":        "string",
-							"description": "Contact email for the service",
-						},
-						"interpretation_services": map[string]interface{}{
-							"type":        "string",
-							"description": "Languages and interpretation services available",
-						},
-						"application_process": map[string]interface{}{
-							"type":        "string",
-							"description": "Steps required to apply for or access the service",
-						},
-						"fees_description": map[string]interface{}{
-							"type":        "string",
-							"description": "Detailed description of any fees or costs",
-						},
-						"accreditations": map[string]interface{}{
-							"type":        "string",
-							"description": "Any professional accreditations or certifications",
-						},
-						"eligibility_description": map[string]interface{}{
-							"type":        "string",
-							"description": "Who is eligible to receive this service",
-						},
-						"minimum_age": map[string]interface{}{
-							"type":        "number",
-							"description": "Minimum age requirement for service recipients",
-						},
-						"maximum_age": map[string]interface{}{
-							"type":        "number",
-							"description": "Maximum age limit for service recipients",
-						},
-						"alert": map[string]interface{}{
-							"type":        "string",
-							"description": "Important notices or warnings about the service",
-						},
+var ServicesSchema = inference.ToolInputSchema{
+	Type: "object",
+	Properties: map[string]inference.Property{
+		"new_services": {
+			Type:        "array",
+			Description: "Array of new services identified in the conversation",
+			Items: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					// Handled Manually
+					// "organization_id": map[string]interface{}{
+					// 	"type":        "string",
+					// 	"description": "UUID v4 of the organization offering the service",
+					// },
+					"name": map[string]interface{}{
+						"type":        "string",
+						"description": "Primary name of the service",
 					},
-					"required": []string{"organization_id", "name", "status"},
+					"status": map[string]interface{}{
+						"type":        "string",
+						"description": "Current operational status of the service",
+						"enum":        []string{"active", "inactive", "defunct"},
+					},
+					// Handled Manually
+					// "program_id": map[string]interface{}{
+					// 	"type":        "string",
+					// 	"description": "Optional UUID v4 of the program this service belongs to",
+					// },
+					"alternate_name": map[string]interface{}{
+						"type":        "string",
+						"description": "Alternative name or abbreviation for the service",
+					},
+					"description": map[string]interface{}{
+						"type":        "string",
+						"description": "Detailed description of what the service provides",
+					},
+					"url": map[string]interface{}{
+						"type":        "string",
+						"description": "Website or webpage for the service",
+					},
+					"email": map[string]interface{}{
+						"type":        "string",
+						"description": "Contact email for the service",
+					},
+					"interpretation_services": map[string]interface{}{
+						"type":        "string",
+						"description": "Languages and interpretation services available",
+					},
+					"application_process": map[string]interface{}{
+						"type":        "string",
+						"description": "Steps required to apply for or access the service",
+					},
+					"fees_description": map[string]interface{}{
+						"type":        "string",
+						"description": "Detailed description of any fees or costs",
+					},
+					"accreditations": map[string]interface{}{
+						"type":        "string",
+						"description": "Any professional accreditations or certifications",
+					},
+					"eligibility_description": map[string]interface{}{
+						"type":        "string",
+						"description": "Who is eligible to receive this service",
+					},
+					"minimum_age": map[string]interface{}{
+						"type":        "number",
+						"description": "Minimum age requirement for service recipients",
+					},
+					"maximum_age": map[string]interface{}{
+						"type":        "number",
+						"description": "Maximum age limit for service recipients",
+					},
+					"alert": map[string]interface{}{
+						"type":        "string",
+						"description": "Important notices or warnings about the service",
+					},
 				},
+				"required": []string{"name", "status", "description"},
 			},
 		},
-		Required: []string{"new_services"},
-	}
+	},
+	Required: []string{"new_services"},
 }

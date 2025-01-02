@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/david-botos/BearHug/services/analysis/internal/processor/services"
+	"github.com/david-botos/BearHug/services/analysis/internal/processor/structOutputs"
 )
 
 // TableName represents valid table names in the system
@@ -115,15 +115,15 @@ type TriageOutput struct {
 
 // tablePromptMap maps table types to their corresponding prompt generation functions
 var tablePromptMap = map[TableName]func(transcript string, reasoning string) (string, interface{}){
-	ServicesTable: services.GenerateServicesPrompt,
+	ServicesTable: structOutputs.GenerateServicesPrompt,
 	// TODO:
-	// ServiceCapacityTable:  services.GenerateServiceCapacityPrompt,
-	// UnitTable:             generateUnitPrompt,
-	// ScheduleTable:         generateSchedulePrompt,
-	// ProgramTable:          generateProgramPrompt,
-	// RequiredDocumentTable: generateRequiredDocumentPrompt,
-	// ContactTable:          generateContactPrompt,
-	// PhoneTable:            generatePhonePrompt,
+	// ServiceCapacityTable:  structOutputs.GenerateServiceCapacityPrompt,
+	// UnitTable:             structOutputs.GenerateUnitPrompt,
+	// ScheduleTable:         structOutputs.GenerateSchedulePrompt,
+	// ProgramTable:          structOutputs.GenerateProgramPrompt,
+	// RequiredDocumentTable: structOutputs.GenerateRequiredDocumentPrompt,
+	// ContactTable:          structOutputs.GenerateContactPrompt,
+	// PhoneTable:            structOutputs.GeneratePhonePrompt,
 }
 
 // ProcessTriageData processes the detected tables and reasoning to generate corresponding prompts and schemas

@@ -2,36 +2,79 @@ package structOutputs
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/inference"
+	"github.com/david-botos/BearHug/services/analysis/internal/supabase"
 )
 
-func GenerateServicesPrompt(transcript string, reasoning string) (string, interface{}) {
-	prompt := fmt.Sprintf(`You are a service data extraction specialist that documents details about human services available to the underprivileged in your community. Your task is to identify and structure information about new services mentioned in a conversation transcript. You have been provided with both the transcript and initial reasoning about services mentioned.
+func GenerateServicesPrompt(organization_id string, transcript string) (string, interface{}, error) {
+	// fetch and store the organization and its services from supa
+	orgName, orgNameFetchErr := supabase.FetchOrganizationName(organization_id)
+	if orgNameFetchErr != nil {
+		return "", nil, fmt.Errorf("organization_lookup_failed: %w", orgNameFetchErr)
+	}
+
+	orgServices, orgServicesFetchErr := supabase.FetchOrganizationServices(organization_id)
+	if orgServicesFetchErr != nil {
+		return "", nil, fmt.Errorf("services_lookup_failed: %w", orgServicesFetchErr)
+	}
+
+	// Format existing services into a readable string
+	var servicesText string
+	if len(orgServices) == 0 {
+		servicesText = "No services are currently documented for this organization."
+	} else {
+		var servicesList strings.Builder
+		for i, service := range orgServices {
+			servicesList.WriteString(fmt.Sprintf("%d. %s\n", i+1, service.Name))
+
+			if service.Description != nil {
+				servicesList.WriteString(fmt.Sprintf("   Description: %s\n", *service.Description))
+			}
+
+			if service.EligibilityDescription != nil {
+				servicesList.WriteString(fmt.Sprintf("   Eligibility: %s\n", *service.EligibilityDescription))
+			}
+
+			if service.FeesDescription != nil {
+				servicesList.WriteString(fmt.Sprintf("   Fees: %s\n", *service.FeesDescription))
+			}
+
+			if i < len(orgServices)-1 {
+				servicesList.WriteString("\n")
+			}
+		}
+		servicesText = servicesList.String()
+	}
+
+	prompt := fmt.Sprintf(`You are a service data extraction specialist that documents details about human services available to the underprivileged in your community. 
+    Your task is to identify and structure information about new services mentioned in a conversation transcript. You have been provided with both the transcript and services
+    that are currently documented for %s, the organization that was called to generate the transcript.
 
 Transcript:
 %s
 
-Initial Service Analysis:
+Services that were previously documented as being offered by %s:
 %s
 
 Your task is to extract detailed information about each new service mentioned and structure it according to the provided schema. For each service:
-1. Create a complete service entry with all required fields (organization_id, name, status)
-2. Include any optional fields that were explicitly mentioned in the transcript
+1. Create a complete service entry with all required fields (name, status, description)
+2. Include any optional fields that were explicitly mentioned or can be easily inferred in the transcript. Do not invent details that are not implied.
 3. Use clear, objective language for descriptions
-4. Preserve exact details like times, dates, and requirements
-5. Do not include information that wasn't explicitly stated
+4. Don't worry about capturing scheduling details or capacity information about each service, that will be captured in another table 
 
 Guidelines for extraction:
 - If multiple similar services are mentioned (e.g., different medical services), create separate entries for each distinct service
 - Default service status to "active" unless otherwise indicated
-- For recurring events (like weekly dinners), include frequency in the description
 - Extract any eligibility requirements or application processes mentioned
 - Capture specific details about fees (including if service is free)
-- Note any documentation requirements (like government ID) in the application_process field
 
-IMPORTANT: You must ONLY respond by using the extract_services tool to output the structured data. Do not provide any explanatory text, confirmations, or additional messages. Simply use the tool to output the structured data following the schema exactly. Only include information that was explicitly discussed - do not make assumptions or add details not present in the transcript.`, transcript, reasoning)
-	return prompt, ServicesSchema
+IMPORTANT: You must ONLY respond by using the extract_services tool to output the structured data. Do not provide any explanatory text, confirmations, or additional messages. 
+Simply use the tool to output the structured data following the schema exactly. Only include information that was explicitly discussed - do not make assumptions or add details 
+not easily inferred from the transcript.`, orgName, transcript, orgName, servicesText)
+
+	return prompt, ServicesSchema, nil
 }
 
 var ServicesSchema = inference.ToolInputSchema{

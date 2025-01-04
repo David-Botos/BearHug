@@ -114,10 +114,12 @@ type TriageOutput struct {
 }
 
 // tablePromptMap maps table types to their corresponding prompt generation functions
-var tablePromptMap = map[TableName]func(transcript string, reasoning string) (string, interface{}){
+var tablePromptMap = map[TableName]func(transcript string, reasoning string) (string, interface{}, error){
 	ServicesTable: structOutputs.GenerateServicesPrompt,
-	// TODO:
+
+	// TODO: add error propagation
 	// ServiceCapacityTable:  structOutputs.GenerateServiceCapacityPrompt,
+	// TODO:
 	// UnitTable:             structOutputs.GenerateUnitPrompt,
 	// ScheduleTable:         structOutputs.GenerateSchedulePrompt,
 	// ProgramTable:          structOutputs.GenerateProgramPrompt,
@@ -147,7 +149,8 @@ func ProcessTriageData(transcript string, detectedTables []string, reasoning []s
 			return nil, fmt.Errorf("invalid table type: %s", table)
 		}
 
-		prompt, schema := promptFunc(transcript, reasoning[i])
+		// TODO: third output is error for propagation / handling
+		prompt, schema, _ := promptFunc(transcript, reasoning[i])
 		output.Prompts = append(output.Prompts, prompt)
 		output.Schemas = append(output.Schemas, schema)
 	}

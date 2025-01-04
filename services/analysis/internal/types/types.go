@@ -36,7 +36,7 @@ func (sc ServiceCategory) IsValid() bool {
 }
 
 type TranscriptsReqBody struct {
-	Organization      string            `json:"organization"`
+	OrganizationID    string            `json:"organization_id"`
 	ServiceCategories []ServiceCategory `json:"serviceCategories"`
 	RoomURL           string            `json:"room_url"`
 	Transcript        string            `json:"transcript"`

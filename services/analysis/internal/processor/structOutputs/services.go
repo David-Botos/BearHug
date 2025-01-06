@@ -9,16 +9,16 @@ import (
 	"github.com/david-botos/BearHug/services/analysis/internal/supabase"
 )
 
-func GenerateServicesPrompt(organization_id string, transcript string) (string, interface{}, error) {
+func GenerateServicesPrompt(organization_id string, transcript string) (string, inference.ToolInputSchema, error) {
 	// fetch and store the organization and its services from supa
 	orgName, orgNameFetchErr := supabase.FetchOrganizationName(organization_id)
 	if orgNameFetchErr != nil {
-		return "", nil, fmt.Errorf("organization_lookup_failed: %w", orgNameFetchErr)
+		return "", inference.ToolInputSchema{}, fmt.Errorf("organization_lookup_failed: %w", orgNameFetchErr)
 	}
 
 	orgServices, orgServicesFetchErr := supabase.FetchOrganizationServices(organization_id)
 	if orgServicesFetchErr != nil {
-		return "", nil, fmt.Errorf("services_lookup_failed: %w", orgServicesFetchErr)
+		return "", inference.ToolInputSchema{}, fmt.Errorf("services_lookup_failed: %w", orgServicesFetchErr)
 	}
 
 	// Format existing services into a readable string
@@ -46,9 +46,7 @@ func GenerateServicesPrompt(organization_id string, transcript string) (string, 
 		servicesText = servicesList.String()
 	}
 
-	prompt := fmt.Sprintf(`You are a service data extraction specialist that documents details about human services available to the underprivileged in your community. 
-    Your task is to identify and structure information about new services mentioned in a conversation transcript. You have been provided with both the transcript and services
-    that are currently documented for %s, the organization that was called to generate the transcript.
+	prompt := fmt.Sprintf(`You are a service data extraction specialist that documents details about human services available to the underprivileged in your community. Your task is to identify and structure information about new services mentioned in a conversation transcript, not currently known for %s. You have been provided with both the transcript and services that are currently documented for %s, the organization that was called to generate the transcript.
 
 Transcript:
 %s
@@ -69,8 +67,7 @@ Guidelines for extraction:
 - Extract any eligibility requirements or application processes mentioned
 - Capture specific details about fees (if the service is free state "Free" and nothing else)
 
-IMPORTANT: You must ONLY respond by using the extract_services tool to output the structured data. Do not provide any explanatory text, confirmations, or additional messages. 
-Simply use the tool to output the structured data following the schema exactly.`, orgName, transcript, orgName, servicesText)
+IMPORTANT: You must ONLY respond by using the extract_services tool to output the structured data. Do not provide any explanatory text, confirmations, or additional messages. Simply use the tool to output the structured data following the schema exactly.`, orgName, orgName, transcript, orgName, servicesText)
 
 	return prompt, ServicesSchema, nil
 }

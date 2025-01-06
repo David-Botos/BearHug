@@ -8,7 +8,7 @@ import (
 	"github.com/david-botos/BearHug/services/analysis/internal/types"
 )
 
-func StoreCallData(params types.StoreCallDataParams) error {
+func StoreCallData(params types.TranscriptsReqBody) error {
 	client, err := initSupabaseClient()
 	if err != nil {
 		return fmt.Errorf("failed to initialize Supabase client: %w", err)
@@ -22,7 +22,7 @@ func StoreCallData(params types.StoreCallDataParams) error {
 	data, _, err := client.From("transcripts").
 		Insert(map[string]interface{}{
 			"full_transcript": params.Transcript,
-		}, false, "", "representation", ""). // Changed returning to "representation"
+		}, false, "", "representation", "").
 		Execute()
 
 	if err != nil {
@@ -46,7 +46,7 @@ func StoreCallData(params types.StoreCallDataParams) error {
 
 	// Create the call data
 	callData := map[string]interface{}{
-		"fk_organization": params.Organization,
+		"fk_organization": params.OrganizationID,
 		"room_url":        params.RoomURL,
 		"fk_transcript":   transcriptID,
 	}

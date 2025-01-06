@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/david-botos/BearHug/services/analysis/internal/hsds_types"
 	"github.com/david-botos/BearHug/services/analysis/internal/types"
 )
 
@@ -41,7 +42,6 @@ func StoreCallData(params types.TranscriptsReqBody) error {
 
 	transcriptID := results[0].ID
 
-	// Debug log
 	log.Printf("DEBUG: Transcript ID: %s", transcriptID)
 
 	// Create the call data
@@ -51,13 +51,57 @@ func StoreCallData(params types.TranscriptsReqBody) error {
 		"fk_transcript":   transcriptID,
 	}
 
-	// Insert into calls table with explicit returning
+	// Insert into calls table
 	data, _, err = client.From("calls").
 		Insert(callData, false, "", "representation", "").
 		Execute()
 
 	if err != nil {
 		return fmt.Errorf("failed to insert call data: %w", err)
+	}
+
+	return nil
+}
+
+func StoreNewServices(services []*hsds_types.Service) error {
+	client, err := initSupabaseClient()
+	if err != nil {
+		return fmt.Errorf("failed to initialize Supabase client: %w", err)
+	}
+
+	for _, service := range services {
+		serviceData := map[string]interface{}{
+			"id":                      service.ID,
+			"organization_id":         service.OrganizationID,
+			"name":                    service.Name,
+			"status":                  service.Status,
+			"program_id":              service.ProgramID,
+			"alternate_name":          service.AlternateName,
+			"description":             service.Description,
+			"url":                     service.URL,
+			"email":                   service.Email,
+			"interpretation_services": service.InterpretationServices,
+			"application_process":     service.ApplicationProcess,
+			"fees_description":        service.FeesDescription,
+			"eligibility_description": service.EligibilityDescription,
+			"minimum_age":             service.MinimumAge,
+			"maximum_age":             service.MaximumAge,
+			"alert":                   service.Alert,
+			"wait_time":               service.WaitTime,
+			"fees":                    service.Fees,
+			"licenses":                service.Licenses,
+			"accreditations":          service.Accreditations,
+			"assured_date":            service.AssuredDate,
+			"assurer_email":           service.AssurerEmail,
+			"last_modified":           service.LastModified,
+		}
+
+		data, _, err := client.From("services").
+			Insert(serviceData, false, "", "representation", "").
+			Execute()
+		if err != nil {
+			return fmt.Errorf("failed to insert service data: %w, data: %s", err, string(data))
+		}
 	}
 
 	return nil

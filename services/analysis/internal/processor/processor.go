@@ -8,6 +8,7 @@ import (
 	"github.com/david-botos/BearHug/services/analysis/internal/hsds_types"
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/inference"
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/structOutputs"
+	"github.com/david-botos/BearHug/services/analysis/internal/supabase"
 	"github.com/david-botos/BearHug/services/analysis/internal/types"
 	"github.com/joho/godotenv"
 )
@@ -22,14 +23,18 @@ func ProcessTranscript(params types.TranscriptsReqBody) (bool, error) {
 	}
 
 	// Turn Services into DB format + Add Org ID FK
-	services, err := convertInferenceToServices(t1Services, params.OrganizationID)
-	if err != nil {
-		return false, fmt.Errorf("error converting inference results: %w", err)
+	services, infConvErr := convertInferenceToServices(t1Services, params.OrganizationID)
+	if infConvErr != nil {
+		return false, fmt.Errorf("error converting inference results: %w", infConvErr)
 	}
 
 	fmt.Printf("Generated services successfully: ", services != nil)
 
 	// Insert new services into Supa
+	newServicesStorageErr := supabase.StoreNewServices(services)
+	if newServicesStorageErr != nil {
+		return false, fmt.Errorf("error storing new services: %w", newServicesStorageErr)
+	}
 
 	/* Tranche 2: */
 

@@ -3,8 +3,7 @@ package triage
 import (
 	"fmt"
 	"strings"
-
-	"github.com/david-botos/BearHug/services/analysis/internal/processor/structOutputs"
+	// "github.com/david-botos/BearHug/services/analysis/internal/processor/structOutputs"
 )
 
 // TableName represents valid table names in the system
@@ -115,7 +114,7 @@ type TriageOutput struct {
 
 // tablePromptMap maps table types to their corresponding prompt generation functions
 var tablePromptMap = map[TableName]func(transcript string, reasoning string) (string, interface{}, error){
-	ServicesTable: structOutputs.GenerateServicesPrompt,
+	// ServicesTable: structOutputs.GenerateServicesPrompt,
 
 	// TODO: add error propagation
 	// ServiceCapacityTable:  structOutputs.GenerateServiceCapacityPrompt,

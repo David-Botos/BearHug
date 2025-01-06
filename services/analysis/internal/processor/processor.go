@@ -8,11 +8,11 @@ import (
 	"github.com/david-botos/BearHug/services/analysis/internal/hsds_types"
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/inference"
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/structOutputs"
+	"github.com/david-botos/BearHug/services/analysis/internal/processor/triage"
 	"github.com/david-botos/BearHug/services/analysis/internal/types"
 	"github.com/joho/godotenv"
 )
 
-// TODO: Check the return types based on what i end up wanting to return, right now I assume ill just return true if its successful
 func ProcessTranscript(params types.TranscriptsReqBody) (bool, error) {
 	// Extract services based on the transcript
 	t1Services, t1ServicesErr := t1ServicesExtraction(params)
@@ -28,9 +28,24 @@ func ProcessTranscript(params types.TranscriptsReqBody) (bool, error) {
 
 	fmt.Printf("Generated services successfully: ", services != nil)
 
-	// Create a prompt and schema that uses the transcript and descriptions of detail categories to extract which further detailed analysis should be run
+	// Generate prompt and schema to triage out what details are present
+	detailTriagePrompt, detailTriageSchema := triage.GenerateTriagePrompt(params.Transcript)
+
+	// Declare Claude Inference Client
+	workingDir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	envPath := filepath.Join(workingDir, ".env")
+	if err := godotenv.Load(envPath); err != nil {
+		panic(err)
+	}
+	fmt.Printf("envPath declared as: %s\n", envPath)
+	client := inference.NewClient(os.Getenv("ANTHROPIC_API_KEY"))
+	fmt.Printf("Initialized client with API key length: %d\n", len(os.Getenv("ANTHROPIC_API_KEY")))
 
 	// Run inference
+	serviceDetailsRes, serviceDetailsErr := client.RunClaudeInference(inference.PromptParams{Prompt: detailTriagePrompt, Schema: detailTriageSchema})
 
 	// Format the response in a simple array that can be used in switch case to fire up to 5 go routines to analyze details
 

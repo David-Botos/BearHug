@@ -67,7 +67,7 @@ Guidelines for extraction:
 - Extract any eligibility requirements or application processes mentioned
 - Capture specific details about fees (if the service is free state "Free" and nothing else)
 
-IMPORTANT: You must ONLY respond by using the extract_services tool to output the structured data. Do not provide any explanatory text, confirmations, or additional messages. Simply use the tool to output the structured data following the schema exactly.`, orgName, orgName, transcript, orgName, servicesText)
+IMPORTANT: You must ONLY respond by using the new_services tool to output the structured data. Do not provide any explanatory text, confirmations, or additional messages. Simply use the tool to output the structured data following the schema exactly.`, orgName, orgName, transcript, orgName, servicesText)
 
 	return prompt, ServicesSchema, nil
 }

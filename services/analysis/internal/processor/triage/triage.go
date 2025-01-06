@@ -3,7 +3,8 @@ package triage
 import (
 	"fmt"
 	"strings"
-	// "github.com/david-botos/BearHug/services/analysis/internal/processor/structOutputs"
+
+	"github.com/david-botos/BearHug/services/analysis/internal/processor/inference"
 )
 
 // TableName represents valid table names in the system
@@ -28,10 +29,6 @@ type TableDescription struct {
 
 // Define descriptions for each table
 var tableDescriptions = []TableDescription{
-	{
-		Name:        ServicesTable,
-		Description: "Contains individual services offered to the community, including service name, description, active status, application process, and eligibility specifications",
-	},
 	{
 		Name:        ServiceCapacityTable,
 		Description: "Defines capacity limits for services (e.g., number of available beds, quantity of monetary assistance awards available)",
@@ -64,7 +61,6 @@ var tableDescriptions = []TableDescription{
 
 // Define a map of valid table names for validation
 var validTableNames = map[TableName]bool{
-	ServicesTable:         true,
 	ServiceCapacityTable:  true,
 	UnitTable:             true,
 	ScheduleTable:         true,
@@ -75,7 +71,7 @@ var validTableNames = map[TableName]bool{
 }
 
 // GenerateTriagePrompt should output what tables are worth looking into filling based on the transcript
-func GenerateTriagePrompt(transcript string) string {
+func GenerateTriagePrompt(transcript string) (string, inference.ToolInputSchema) {
 	var tableDescriptionStrings []string
 	for _, desc := range tableDescriptions {
 		tableDescriptionStrings = append(tableDescriptionStrings,
@@ -98,61 +94,9 @@ func GenerateTriagePrompt(transcript string) string {
 	Guidelines:
 	1. Only include tables with clear transcript evidence
 	2. Use specific quotes/examples in reasoning
-	3. Consider implicit references (e.g., hours mentioned → schedule table)`,
+	3. Consider implicit references (e.g., hours mentioned → schedule table)
+	IMPORTANT: You must ONLY respond by using the triage_details tool to output the structured data. Do not provide any explanatory text, confirmations, or additional messages. Simply use the tool to output the structured data following the schema exactly.`,
 		strings.Join(tableDescriptionStrings, "\n"),
 		transcript)
-	return prompt
-}
-
-// TriageOutput represents the structured output containing detected tables, reasoning, and generated prompts
-type TriageOutput struct {
-	DetectedTables []string      `json:"detected_tables"`
-	Reasoning      []string      `json:"reasoning"`
-	Prompts        []string      `json:"prompts"`
-	Schemas        []interface{} `json:"schemas"`
-}
-
-// tablePromptMap maps table types to their corresponding prompt generation functions
-var tablePromptMap = map[TableName]func(transcript string, reasoning string) (string, interface{}, error){
-	// ServicesTable: structOutputs.GenerateServicesPrompt,
-
-	// TODO: add error propagation
-	// ServiceCapacityTable:  structOutputs.GenerateServiceCapacityPrompt,
-	// TODO:
-	// UnitTable:             structOutputs.GenerateUnitPrompt,
-	// ScheduleTable:         structOutputs.GenerateSchedulePrompt,
-	// ProgramTable:          structOutputs.GenerateProgramPrompt,
-	// RequiredDocumentTable: structOutputs.GenerateRequiredDocumentPrompt,
-	// ContactTable:          structOutputs.GenerateContactPrompt,
-	// PhoneTable:            structOutputs.GeneratePhonePrompt,
-}
-
-// ProcessTriageData processes the detected tables and reasoning to generate corresponding prompts and schemas
-func ProcessTriageData(transcript string, detectedTables []string, reasoning []string) (*TriageOutput, error) {
-	if len(detectedTables) != len(reasoning) {
-		return nil, fmt.Errorf("mismatch between detected tables (%d) and reasoning (%d) lengths",
-			len(detectedTables), len(reasoning))
-	}
-
-	output := &TriageOutput{
-		DetectedTables: detectedTables,
-		Reasoning:      reasoning,
-		Prompts:        make([]string, 0, len(detectedTables)),
-		Schemas:        make([]interface{}, 0, len(detectedTables)),
-	}
-
-	for i, table := range detectedTables {
-		tableType := TableName(table)
-		promptFunc, exists := tablePromptMap[tableType]
-		if !exists {
-			return nil, fmt.Errorf("invalid table type: %s", table)
-		}
-
-		// TODO: third output is error for propagation / handling
-		prompt, schema, _ := promptFunc(transcript, reasoning[i])
-		output.Prompts = append(output.Prompts, prompt)
-		output.Schemas = append(output.Schemas, schema)
-	}
-
-	return output, nil
+	return prompt, TriageDetailsTool
 }

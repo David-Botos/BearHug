@@ -2,37 +2,34 @@ package triage
 
 import "github.com/david-botos/BearHug/services/analysis/internal/processor/inference"
 
-func NewTriageSchema() inference.ToolInputSchema {
-	return inference.ToolInputSchema{
-		Type: "object",
-		Properties: map[string]inference.Property{
-			"detected_tables": {
-				Type:        "array",
-				Description: "Array of valid table names in the system",
-				Items: map[string]interface{}{
-					"type": "string",
-					"enum": []string{
-						string(ServicesTable),
-						string(ServiceCapacityTable),
-						string(UnitTable),
-						string(ScheduleTable),
-						string(ProgramTable),
-						string(RequiredDocumentTable),
-						string(ContactTable),
-						string(PhoneTable),
-					},
-					"description": "Valid table name",
+var TriageDetailsTool = inference.ToolInputSchema{
+	Type: "object",
+	Properties: map[string]inference.Property{
+		"detected_tables": {
+			Type:        "array",
+			Description: "Array of valid table names in the system",
+			Items: map[string]interface{}{
+				"type": "string",
+				"enum": []string{
+					string(ServiceCapacityTable),
+					string(UnitTable),
+					string(ScheduleTable),
+					string(ProgramTable),
+					string(RequiredDocumentTable),
+					string(ContactTable),
+					string(PhoneTable),
 				},
-			},
-			"reasoning": {
-				Type:        "array",
-				Description: "Array of explanations where each index maps directly to the table at the same index in detected_tables",
-				Items: map[string]interface{}{
-					"type":        "string",
-					"description": "Explanation for why the corresponding table in detected_tables was selected, including specific evidence from the transcript",
-				},
+				"description": "Valid table name",
 			},
 		},
-		Required: []string{"detected_tables", "reasoning"},
-	}
+		"reasoning": {
+			Type:        "array",
+			Description: "Array of explanations where each index maps directly to the table at the same index in detected_tables",
+			Items: map[string]interface{}{
+				"type":        "string",
+				"description": "Explanation for why the corresponding table in detected_tables was selected, including specific evidence from the transcript",
+			},
+		},
+	},
+	Required: []string{"detected_tables", "reasoning"},
 }

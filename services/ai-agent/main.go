@@ -2,40 +2,38 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 
-	"github.com/henomis/lingoose/assistant"
-	"github.com/henomis/lingoose/llm/openai"
-	"github.com/henomis/lingoose/thread"
-	"github.com/joho/godotenv"
+	"github.com/david-botos/BearHug/services/ai-agent/config"
+	"github.com/david-botos/BearHug/services/ai-agent/features/assistant"
+	"github.com/david-botos/BearHug/services/ai-agent/features/elevenlabs"
 )
 
 func main() {
-	
-	if err := godotenv.Load(); err != nil {
-        log.Print("No .env file found")
-    }
 
+	// Load env varibles
+	config.LoadConfig()
 
-	openaiLLM := assistant.New(openai.New().
-    WithTemperature(0).
-    WithModel(openai.GPT4))
+	// Instantiate an aiAssistant
+	aiAssistant := assistant.New()
 
-	myThread := thread.New().AddMessage(
-		thread.NewSystemMessage().AddContent(
-			thread.NewTextContent("You are a powerful AI assistant."),
-		),
-	).AddMessage(
-		thread.NewUserMessage().AddContent(
-			thread.NewTextContent("Hello, how are you?"),
-		),
-	)
-	
-	err := openaiLLM.RunWithThread(context.Background(), myThread)
+	// Instantiate ElevenLabs TTS service
+	elevenLabs := elevenlabs.New(config.LoadConfig().ElevenLabsAPIKey)
+
+	// Start a conversation thread
+	thread := aiAssistant.CreateThread("You are a technical support AI", "Hello, I need help with my PC.")
+
+	// LLM response thread
+	response, err := aiAssistant.ResponseThread(context.Background(), thread)
+
+	// Process AI response through EL service
+
+	// Handle errors accordingly
 	if err != nil {
-		panic(err)
+		log.Fatalf("Error generating AI response: %v", err)
 	}
-	
-	fmt.Println(myThread)
+
+	// Print response from aiAssistant
+	log.Println("AI Response: ", response)
+
 }

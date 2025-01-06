@@ -18,7 +18,12 @@ func FetchOrganizationName(organizationID string) (string, error) {
 		return "", fmt.Errorf("failed to initialize Supabase client: %w", initErr)
 	}
 
-	var data, _, err = client.From("organization").
+	type Organization struct {
+		Name string `json:"name"`
+	}
+
+	var org Organization
+	data, _, err := client.From("organization").
 		Select("name", "", false).
 		Eq("id", organizationID).
 		Single().
@@ -28,9 +33,11 @@ func FetchOrganizationName(organizationID string) (string, error) {
 		return "", fmt.Errorf("failed to fetch organization: %w", err)
 	}
 
-	var orgName string = string(data[0])
+	if err := json.Unmarshal(data, &org); err != nil {
+		return "", fmt.Errorf("failed to unmarshal organization data: %w", err)
+	}
 
-	return orgName, nil
+	return org.Name, nil
 }
 
 // FetchOrganizationServices retrieves all services associated with an organization

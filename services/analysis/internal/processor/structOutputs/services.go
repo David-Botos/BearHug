@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/david-botos/BearHug/services/analysis/internal/hsds_types"
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/inference"
 	"github.com/david-botos/BearHug/services/analysis/internal/supabase"
 )
@@ -27,22 +28,19 @@ func GenerateServicesPrompt(organization_id string, transcript string) (string, 
 	} else {
 		var servicesList strings.Builder
 		for i, service := range orgServices {
-			servicesList.WriteString(fmt.Sprintf("%d. %s\n", i+1, service.Name))
+			if service.Status == hsds_types.ServiceStatusActive {
+				if service.AlternateName != nil {
+					servicesList.WriteString(fmt.Sprintf("%d. %s AKA %s\n", i+1, service.Name, *service.AlternateName))
+				} else {
+					servicesList.WriteString(fmt.Sprintf("%d. %s\n", i+1, service.Name))
+				}
+				if service.Description != nil {
+					servicesList.WriteString(fmt.Sprintf("Description: %s\n", *service.Description))
+				}
 
-			if service.Description != nil {
-				servicesList.WriteString(fmt.Sprintf("   Description: %s\n", *service.Description))
-			}
-
-			if service.EligibilityDescription != nil {
-				servicesList.WriteString(fmt.Sprintf("   Eligibility: %s\n", *service.EligibilityDescription))
-			}
-
-			if service.FeesDescription != nil {
-				servicesList.WriteString(fmt.Sprintf("   Fees: %s\n", *service.FeesDescription))
-			}
-
-			if i < len(orgServices)-1 {
-				servicesList.WriteString("\n")
+				if i < len(orgServices)-1 {
+					servicesList.WriteString("\n")
+				}
 			}
 		}
 		servicesText = servicesList.String()
@@ -62,17 +60,17 @@ Your task is to extract detailed information about each new service mentioned an
 1. Create a complete service entry with all required fields (name, status, description)
 2. Include any optional fields that were explicitly mentioned or can be easily inferred in the transcript. Do not invent details that are not implied.
 3. Use clear, objective language for descriptions
-4. Don't worry about capturing scheduling details or capacity information about each service, that will be captured in another table 
+4. Don't worry about capturing scheduling details or capacity information about each service, that will be captured in another table
+5. If you aren't confident that the service mentioned in the call was already documented by 
 
 Guidelines for extraction:
 - If multiple similar services are mentioned (e.g., different medical services), create separate entries for each distinct service
 - Default service status to "active" unless otherwise indicated
 - Extract any eligibility requirements or application processes mentioned
-- Capture specific details about fees (including if service is free)
+- Capture specific details about fees (if the service is free state "Free" and nothing else)
 
 IMPORTANT: You must ONLY respond by using the extract_services tool to output the structured data. Do not provide any explanatory text, confirmations, or additional messages. 
-Simply use the tool to output the structured data following the schema exactly. Only include information that was explicitly discussed - do not make assumptions or add details 
-not easily inferred from the transcript.`, orgName, transcript, orgName, servicesText)
+Simply use the tool to output the structured data following the schema exactly.`, orgName, transcript, orgName, servicesText)
 
 	return prompt, ServicesSchema, nil
 }

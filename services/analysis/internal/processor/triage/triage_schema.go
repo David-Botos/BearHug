@@ -5,31 +5,29 @@ import "github.com/david-botos/BearHug/services/analysis/internal/processor/infe
 var TriageDetailsTool = inference.ToolInputSchema{
 	Type: "object",
 	Properties: map[string]inference.Property{
-		"detected_tables": {
+		"detected_categories": {
 			Type:        "array",
-			Description: "Array of valid table names in the system",
+			Description: "Array of detail categories detected in the transcript",
 			Items: map[string]interface{}{
 				"type": "string",
 				"enum": []string{
-					string(ServiceCapacityTable),
-					string(UnitTable),
-					string(ScheduleTable),
-					string(ProgramTable),
-					string(RequiredDocumentTable),
-					string(ContactTable),
-					string(PhoneTable),
+					string(CapacityCategory),
+					string(SchedulingCategory),
+					string(ProgramCategory),
+					string(ReqDocsCategory),
+					string(ContactCategory),
 				},
-				"description": "Valid table name",
+				"description": "Valid detail category name",
 			},
 		},
 		"reasoning": {
 			Type:        "array",
-			Description: "Array of explanations where each index maps directly to the table at the same index in detected_tables",
+			Description: "Array of explanations where each index maps directly to the category at the same index in detected_categories",
 			Items: map[string]interface{}{
 				"type":        "string",
-				"description": "Explanation for why the corresponding table in detected_tables was selected, including specific evidence from the transcript",
+				"description": "Explanation for why the corresponding category was selected, including specific evidence from the transcript",
 			},
 		},
 	},
-	Required: []string{"detected_tables", "reasoning"},
+	Required: []string{"detected_categories", "reasoning"},
 }

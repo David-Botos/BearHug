@@ -59,44 +59,90 @@ var tableDescriptions = []TableDescription{
 	},
 }
 
-// Define a map of valid table names for validation
-var validTableNames = map[TableName]bool{
-	ServiceCapacityTable:  true,
-	UnitTable:             true,
-	ScheduleTable:         true,
-	ProgramTable:          true,
-	RequiredDocumentTable: true,
-	ContactTable:          true,
-	PhoneTable:            true,
+// DetailCategory represents the high-level categories of related tables
+type DetailCategory string
+
+const (
+	CapacityCategory   DetailCategory = "CAPACITY"
+	SchedulingCategory DetailCategory = "SCHEDULING"
+	ProgramCategory    DetailCategory = "PROGRAM"
+	ReqDocsCategory    DetailCategory = "REQDOCS"
+	ContactCategory    DetailCategory = "CONTACT"
+)
+
+// CategoryDescription contains information about what tables and data belong in each category
+type CategoryDescription struct {
+	Category    DetailCategory
+	Tables      []TableName
+	Description string
+}
+
+// Define descriptions for each category
+var categoryDescriptions = []CategoryDescription{
+	{
+		Category:    CapacityCategory,
+		Tables:      []TableName{ServiceCapacityTable, UnitTable},
+		Description: "Information about service capacity limits (e.g., number of beds) and their associated units of measurement",
+	},
+	{
+		Category:    SchedulingCategory,
+		Tables:      []TableName{ScheduleTable},
+		Description: "Service timing information including hours of operation, frequency, and duration",
+	},
+	{
+		Category:    ProgramCategory,
+		Tables:      []TableName{ProgramTable},
+		Description: "Organizational groupings of related services under a common program",
+	},
+	{
+		Category:    ReqDocsCategory,
+		Tables:      []TableName{RequiredDocumentTable},
+		Description: "Documentation requirements for service participation",
+	},
+	{
+		Category:    ContactCategory,
+		Tables:      []TableName{ContactTable, PhoneTable},
+		Description: "Contact information for service representatives including phone numbers",
+	},
 }
 
 // GenerateTriagePrompt should output what tables are worth looking into filling based on the transcript
 func GenerateTriagePrompt(transcript string) (string, inference.ToolInputSchema) {
-	var tableDescriptionStrings []string
-	for _, desc := range tableDescriptions {
-		tableDescriptionStrings = append(tableDescriptionStrings,
-			fmt.Sprintf("%s: %s", desc.Name, desc.Description))
+	var categoryDescriptionStrings []string
+	for _, desc := range categoryDescriptions {
+		tableNames := make([]string, len(desc.Tables))
+		for i, table := range desc.Tables {
+			tableNames[i] = string(table)
+		}
+		categoryDescriptionStrings = append(categoryDescriptionStrings,
+			fmt.Sprintf("%s (%s): %s",
+				desc.Category,
+				strings.Join(tableNames, ", "),
+				desc.Description))
 	}
-	prompt := fmt.Sprintf(`Using the provided tool schema, analyze this transcript and output only a JSON object containing detected tables and their corresponding reasoning.
 
-	Tables:
-	%s
-	
-	Transcript:
-	%s
-	
-	Return a JSON object:
-	{
-		"detected_tables": string[],  // Tables that need population based on transcript
-		"reasoning": string[]         // Index-matched explanations with transcript evidence
-	}
-	
-	Guidelines:
-	1. Only include tables with clear transcript evidence
-	2. Use specific quotes/examples in reasoning
-	3. Consider implicit references (e.g., hours mentioned → schedule table)
-	IMPORTANT: You must ONLY respond by using the triage_details tool to output the structured data. Do not provide any explanatory text, confirmations, or additional messages. Simply use the tool to output the structured data following the schema exactly.`,
-		strings.Join(tableDescriptionStrings, "\n"),
+	prompt := fmt.Sprintf(`Using the provided tool schema, analyze this transcript and output only a JSON object containing detected detail categories and their corresponding reasoning.
+
+    Detail Categories:
+    %s
+    
+    Transcript:
+    %s
+    
+    Return a JSON object:
+    {
+        "detected_categories": string[],  // Categories that need population based on transcript
+        "reasoning": string[]            // Index-matched explanations with transcript evidence
+    }
+    
+    Guidelines:
+    1. Only include categories with clear transcript evidence
+    2. Use specific quotes/examples in reasoning
+    3. Consider implicit references (e.g., hours mentioned → SCHEDULING category)
+    4. For CAPACITY category, look for both the quantity AND its unit of measurement
+    5. For CONTACT category, consider both contact names and associated phone numbers
+    IMPORTANT: You must ONLY respond by using the triage_details tool to output the structured data. Do not provide any explanatory text, confirmations, or additional messages. Simply use the tool to output the structured data following the schema exactly.`,
+		strings.Join(categoryDescriptionStrings, "\n"),
 		transcript)
 	return prompt, TriageDetailsTool
 }

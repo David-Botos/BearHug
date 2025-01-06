@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -11,7 +12,6 @@ import (
 	"github.com/david-botos/BearHug/services/analysis/internal/supabase"
 	"github.com/david-botos/BearHug/services/analysis/internal/types"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
 // Create a package-level logger variable
@@ -19,24 +19,55 @@ var logger zerolog.Logger
 
 // initLogger initializes the global logger
 func initLogger() {
-	logger = zerolog.New(os.Stdout).With().Timestamp().Logger()
+	output := zerolog.ConsoleWriter{
+		Out:        os.Stdout,
+		TimeFormat: "15:04:05",
+		FormatLevel: func(i interface{}) string {
+			switch i.(string) {
+			case "info":
+				return "🟢 INFO"
+			case "debug":
+				return "🔍 DEBUG"
+			case "warn":
+				return "⚠️  WARN"
+			case "error":
+				return "❌ ERROR"
+			case "fatal":
+				return "💀 FATAL"
+			default:
+				return "   " + strings.ToUpper(fmt.Sprint(i))
+			}
+		},
+		FormatMessage: func(i interface{}) string {
+			return fmt.Sprintf("| %s |", i)
+		},
+		FormatFieldName: func(i interface{}) string {
+			return fmt.Sprintf("%s:", i)
+		},
+		FormatFieldValue: func(i interface{}) string {
+			return strings.ToUpper(fmt.Sprint(i))
+		},
+	}
+
+	logger = zerolog.New(output).
+		With().
+		Timestamp().
+		Logger()
 }
 
 func main() {
-	// Initialize zerolog
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	initLogger()
 
 	// Configure routes
 	http.HandleFunc("/transcript", handleTranscript)
 	http.HandleFunc("/GenerateServicesPrompt", handleGenerateServicesPrompt)
 
-	log.Info().
+	logger.Info().
 		Str("port", "8080").
 		Msg("Server starting")
 
 	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatal().
+		logger.Fatal().
 			Err(err).
 			Msg("Server failed to start")
 	}

@@ -8,14 +8,12 @@ import (
 	"github.com/david-botos/BearHug/services/analysis/internal/hsds_types"
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/inference"
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/structOutputs"
-	"github.com/david-botos/BearHug/services/analysis/internal/supabase"
 	"github.com/david-botos/BearHug/services/analysis/internal/types"
 	"github.com/joho/godotenv"
 )
 
 // TODO: Check the return types based on what i end up wanting to return, right now I assume ill just return true if its successful
 func ProcessTranscript(params types.TranscriptsReqBody) (bool, error) {
-	/* Tranche 1: */
 	// Extract services based on the transcript
 	t1Services, t1ServicesErr := t1ServicesExtraction(params)
 	if t1ServicesErr != nil {
@@ -30,17 +28,38 @@ func ProcessTranscript(params types.TranscriptsReqBody) (bool, error) {
 
 	fmt.Printf("Generated services successfully: ", services != nil)
 
-	// Insert new services into Supa
-	newServicesStorageErr := supabase.StoreNewServices(services)
-	if newServicesStorageErr != nil {
-		return false, fmt.Errorf("error storing new services: %w", newServicesStorageErr)
-	}
+	// Create a prompt and schema that uses the transcript and descriptions of detail categories to extract which further detailed analysis should be run
 
-	/* Tranche 2: */
+	// Run inference
 
-	// Analyze for details on old and new services
+	// Format the response in a simple array that can be used in switch case to fire up to 5 go routines to analyze details
 
-	// TODO: incomplete return
+	/* Recombine Routine Results */
+
+	// Combine the old and new services into one array of all the services an organization offers
+
+	// Create an array of interfaces for each detail category so it can be added to and remains in scope
+
+	// Fire off a goroutine for each identified detail category that is applicable
+	/*
+	   1. Generate a prompt for each detail category with context on the organization, their services, and the transcript
+
+	   2. Run inference on each detail category requested
+
+	   3. Create objects for their respective tables
+	*/
+
+	// Recombine a full list of all the new details being added to supabase
+
+	// Create strings describing each service with the critical details about each one identified in a structured way
+
+	// Create a prompt that does a final sanity check on all the new services and their details together with relation to the transcript
+
+	// If anything doesn't pass the sanity check, run inference on the specific service and its details with the transcript and the reasoning from the sanity checker
+
+	// Once everything passes sanity checks, launch a goroutine for each table to store the new information
+
+	// Return the new objects created to the api endpoint if successful for appropriate handling
 	return true, nil
 }
 

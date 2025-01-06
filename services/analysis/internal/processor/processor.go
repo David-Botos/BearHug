@@ -9,6 +9,7 @@ import (
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/inference"
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/structOutputs"
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/triage"
+	"github.com/david-botos/BearHug/services/analysis/internal/supabase"
 	"github.com/david-botos/BearHug/services/analysis/internal/types"
 	"github.com/joho/godotenv"
 )
@@ -46,12 +47,31 @@ func ProcessTranscript(params types.TranscriptsReqBody) (bool, error) {
 
 	// Run inference
 	serviceDetailsRes, serviceDetailsErr := client.RunClaudeInference(inference.PromptParams{Prompt: detailTriagePrompt, Schema: detailTriageSchema})
+	if serviceDetailsErr != nil {
+		return false, fmt.Errorf("error with details identification: %w", serviceDetailsErr)
+	}
 
-	// Format the response in a simple array that can be used in switch case to fire up to 5 go routines to analyze details
+	// Fetch existing services
+	existingServices, fetchErr := supabase.FetchOrganizationServices(params.OrganizationID)
+	if fetchErr != nil {
+		return false, fmt.Errorf("error fetching existing services: %w", fetchErr)
+	}
 
-	/* Recombine Routine Results */
+	// Create service context with both existing and new services
+	serviceCtx := triage.ServiceContext{
+		ExistingServices: existingServices,
+		NewServices:      services,
+	}
 
-	// Combine the old and new services into one array of all the services an organization offers
+	// Extract details about the identified detail categories
+	extractedDetails, detailExtractionErr := triage.HandleTriagedAnalysis(
+		params.Transcript,
+		serviceDetailsRes,
+		serviceCtx,
+	)
+	if detailExtractionErr != nil {
+		return false, fmt.Errorf("error fetching existing services: %w", detailExtractionErr)
+	}
 
 	// Create an array of interfaces for each detail category so it can be added to and remains in scope
 

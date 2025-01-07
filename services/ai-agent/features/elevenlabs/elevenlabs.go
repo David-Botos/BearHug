@@ -1,13 +1,27 @@
 package elevenlabs
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"log"
-	"os/exec"
 	"time"
 
+	"github.com/gopxl/beep"
+	"github.com/gopxl/beep/mp3"
+	"github.com/gopxl/beep/speaker"
 	"github.com/haguro/elevenlabs-go"
 )
+
+// ReaderWithClose wraps a bytes.Reader to implement io.ReadCloser
+type ReaderWithClose struct {
+	*bytes.Reader
+}
+
+func (r *ReaderWithClose) Close() error {
+	// No-op Close method (not needed in this case)
+	return nil
+}
 
 type ElevenLabs struct {
 	elevenlabs *elevenlabs.Client
@@ -15,41 +29,56 @@ type ElevenLabs struct {
 
 func New(key string) *ElevenLabs {
 	client := elevenlabs.NewClient(context.Background(), key, 30*time.Second)
+	elevenlabs.SetAPIKey(key)
 	elevenlabs.SetTimeout(1 * time.Minute)
 	return &ElevenLabs{elevenlabs: client}
 }
 
 func (eleven *ElevenLabs) StreamAudio(message string) {
-	// We'll use mpv to play the audio from the stream piped to standard input
-	cmd := exec.CommandContext(context.Background(), "mpv", "--no-cache", "--no-terminal", "--", "fd://0")
 
-	// Get a pipe connected to the mpv's standard input
-	pipe, err := cmd.StdinPipe()
+	fmt.Println("Message", message)
+
+	// Create a buffer to store audio data
+	mp3Buffer := &bytes.Buffer{}
+
+	// Fetch audio data from ElevenLabs API
+	err := elevenlabs.TextToSpeechStream(
+		mp3Buffer,
+		"cjVigY5qzO86Huf0OWal",
+		elevenlabs.TextToSpeechRequest{
+			Text:    message,
+			ModelID: "eleven_multilingual_v1",
+		},
+	)
+
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error streaming audio: %v", err)
 	}
 
-	// Attempt to run the command in a separate process
-	if err := cmd.Start(); err != nil {
-		log.Fatal(err)
-	}
-	if err := elevenlabs.TextToSpeechStream(pipe,
-		"",
-		elevenlabs.TextToSpeechRequest{Text: message, ModelID: ""}); err != nil {
-		log.Fatal(err)
+	// Create a ReaderWithClose from the bytes.Buffer
+	closableReader := &ReaderWithClose{Reader: bytes.NewReader(mp3Buffer.Bytes())}
+
+	// Decode the MP3 data using beep's MP3 decoder
+	streamer, format, err := mp3.Decode(closableReader)
+	if err != nil {
+		log.Fatalf("Error decoding MP3: %v", err)
 	}
 
-	// Close the pipe when all stream has been copied to the pipe
-	if err := pipe.Close(); err != nil {
-		log.Fatalf("Could not close pipe: %s", err)
-	}
-	log.Print("Streaming finished.")
-
-	// Wait for mpv to exit. With the pipe closed, it will do that as
-	// soon as it finishes playing
-	if err := cmd.Wait(); err != nil {
-		log.Fatal(err)
+	// Initialize the speaker with the correct format
+	if err := speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/10)); err != nil {
+		log.Fatalf("Failed to initialize speaker: %v", err)
 	}
 
-	log.Print("All done.")
+	// Calculate the playback duration in seconds
+	playbackDuration := time.Duration(streamer.Len()) * time.Second / time.Duration(format.SampleRate)
+
+	// Play the audio
+	log.Println("Playing audio...")
+	speaker.Play(beep.Seq(streamer, beep.Callback(func() {
+		log.Println("Audio playback finished.")
+	})))
+
+	// Wait for playback to finish
+	time.Sleep(playbackDuration)
+	log.Println("Playback completed.")
 }

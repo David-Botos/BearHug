@@ -18,12 +18,12 @@ func LoadConfig() Config {
 	}
 
 	return Config{
-		OpenAIAPIKey:     getEnv("OPENAI_API_KEY"),
-		ElevenLabsAPIKey: getEnv("ELEVENLABS_API_KEY"),
+		OpenAIAPIKey:     GetEnv("OPENAI_API_KEY"),
+		ElevenLabsAPIKey: GetEnv("ELEVENLABS_API_KEY"),
 	}
 }
 
-func getEnv(key string) string {
+func GetEnv(key string) string {
 	value, exists := os.LookupEnv(key)
 	if !exists {
 		log.Fatalf("Environment variable %s not set", key)

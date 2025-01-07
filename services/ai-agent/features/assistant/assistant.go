@@ -31,11 +31,12 @@ func (a *Assistant) CreateThread(systemMessage, userMessage string) *thread.Thre
 }
 
 // Function to gather responses from LLM
-func (a *Assistant) ResponseThread(ctx context.Context, th *thread.Thread) (any, error) {
+func (a *Assistant) ResponseThread(ctx context.Context, th *thread.Thread) (string, error) {
 	err := a.aiAssistant.RunWithThread(ctx, th)
 
 	if err != nil {
 		return "", err
 	}
-	return th.LastMessage().Contents[0].Data, nil
+
+	return th.LastMessage().Contents[0].Data.(string), nil
 }

@@ -96,3 +96,39 @@ func FetchOrganizationServices(organizationID string) ([]hsds_types.Service, err
 
 	return services, nil
 }
+
+func FetchUnits() ([]hsds_types.Unit, error) {
+	client, initErr := initSupabaseClient()
+	if initErr != nil {
+		return nil, fmt.Errorf("failed to initialize Supabase client: %w", initErr)
+	}
+
+	var units []hsds_types.Unit
+
+	order := &postgrest.OrderOpts{
+		Ascending:    true,
+		NullsFirst:   false,
+		ForeignTable: "",
+	}
+
+	data, _, err := client.From("Unit").
+		Select(`
+			id,
+			name,
+			scheme,
+			identifier,
+			uri
+		`, "", false).
+		Order("name", order).
+		Execute()
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch units from supa: %w", err)
+	}
+
+	// Unmarshal the byte array into the units slice
+	if err := json.Unmarshal(data, &units); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal units data: %w", err)
+	}
+
+	return units, nil
+}

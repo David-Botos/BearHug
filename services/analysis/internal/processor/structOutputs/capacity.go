@@ -173,13 +173,15 @@ func infToCapacityAndUnits(inferenceResult map[string]interface{}, serviceCtx Se
 
 	// Track matching results
 	matchResults := make([]serviceMatchResult, len(output.Capacities))
-	for i, cap := range output.Capacities {
-		matchedService := findMatchingService(cap, totalServices)
+	for i, capacity := range output.Capacities {
+		matchedService := findMatchingService(capacity, totalServices)
 		matchResults[i] = serviceMatchResult{
-			inference: cap,
+			inference: capacity,
 			service:   matchedService,
 			matched:   matchedService != nil,
 		}
+
+		// TODO: is this right?
 	}
 
 	// Check if we have any unmatched capacities
@@ -190,6 +192,7 @@ func infToCapacityAndUnits(inferenceResult map[string]interface{}, serviceCtx Se
 		}
 	}
 	if len(unmatched) > 0 {
+		// TODO: add inference to match / make sense of output
 		return nil, nil, fmt.Errorf("unable to match services for: %s", strings.Join(unmatched, ", "))
 	}
 

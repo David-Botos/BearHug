@@ -7,6 +7,7 @@ import (
 
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/inference"
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/structOutputs"
+	"github.com/david-botos/BearHug/services/analysis/internal/processor/validation"
 	"github.com/david-botos/BearHug/services/analysis/internal/supabase"
 	"github.com/david-botos/BearHug/services/analysis/internal/types"
 	"github.com/joho/godotenv"
@@ -71,17 +72,15 @@ func ProcessTranscript(params types.TranscriptsReqBody) (bool, error) {
 		return false, fmt.Errorf("error fetching existing services: %w", detailExtractionErr)
 	}
 
+	// Validate the details extracted for duplicates and hallucinations
+	validationResult, validatorErr := validation.ValidateExtractedInfo(extractedDetails, serviceCtx, params.Transcript)
+	if validatorErr != nil {
+		return false, fmt.Errorf(`Error when attempting to validate the information extracted from transcript: %w`, validatorErr)
+	}
 
-	// Recombine a full list of all the new details being added to supabase
-
-	// Create strings describing each service with the critical details about each one identified in a structured way
-
-	// Create a prompt that does a final sanity check on all the new services and their details together with relation to the transcript
-
-	// If anything doesn't pass the sanity check, run inference on the specific service and its details with the transcript and the reasoning from the sanity checker
-
-	// Once everything passes sanity checks, launch a goroutine for each table to store the new information
-
-	// Return the new objects created to the api endpoint if successful for appropriate handling
-	return true, nil
+	if validationResult {
+		return true, nil
+	} else {
+		return false, fmt.Errorf(`Ah shit.... Unhandled error... good luck homie`)
+	}
 }

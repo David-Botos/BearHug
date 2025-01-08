@@ -1,4 +1,4 @@
-package triage
+package structOutputs
 
 import (
 	"fmt"
@@ -57,24 +57,6 @@ var tableDescriptions = []TableDescription{
 		Name:        PhoneTable,
 		Description: "Stores phone numbers for follow-up or additional information",
 	},
-}
-
-// DetailCategory represents the high-level categories of related tables
-type DetailCategory string
-
-const (
-	CapacityCategory   DetailCategory = "CAPACITY"
-	SchedulingCategory DetailCategory = "SCHEDULING"
-	ProgramCategory    DetailCategory = "PROGRAM"
-	ReqDocsCategory    DetailCategory = "REQDOCS"
-	ContactCategory    DetailCategory = "CONTACT"
-)
-
-// CategoryDescription contains information about what tables and data belong in each category
-type CategoryDescription struct {
-	Category    DetailCategory
-	Tables      []TableName
-	Description string
 }
 
 // Define descriptions for each category

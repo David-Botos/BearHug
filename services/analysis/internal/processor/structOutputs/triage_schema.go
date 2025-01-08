@@ -1,4 +1,4 @@
-package triage
+package structOutputs
 
 import "github.com/david-botos/BearHug/services/analysis/internal/processor/inference"
 

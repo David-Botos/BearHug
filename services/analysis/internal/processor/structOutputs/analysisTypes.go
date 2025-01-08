@@ -35,7 +35,7 @@ type CapacityResult struct {
 // DetailAnalysisResult holds the results of analyzing a specific category of details
 type DetailAnalysisResult struct {
 	Category DetailCategory
-	
+
 	// Type-specific results
 	CapacityData *CapacityResult
 	// Add other category-specific fields as they are implemented
@@ -43,14 +43,6 @@ type DetailAnalysisResult struct {
 	// ProgramData    *ProgramResult
 	// ReqDocsData    *ReqDocsResult
 	// ContactData    *ContactResult
-}
-
-// GetCapacityData safely retrieves capacity-specific data if available
-func (r *DetailAnalysisResult) GetCapacityData() (*CapacityResult, bool) {
-	if r.Category != CapacityCategory || r.CapacityData == nil {
-		return nil, false
-	}
-	return r.CapacityData, true
 }
 
 // NewCapacityResult creates a new DetailAnalysisResult for capacity data
@@ -66,14 +58,14 @@ func NewCapacityResult(capacities []*hsds_types.ServiceCapacity, units []*hsds_t
 
 // As other categories are implemented, add their corresponding result types and constructor functions:
 /*
-type SchedulingResult struct {
-	// Add scheduling-specific fields
-}
-
-func NewSchedulingResult(...) *DetailAnalysisResult {
-	return &DetailAnalysisResult{
-		Category: SchedulingCategory,
-		SchedulingData: &SchedulingResult{...},
+	type SchedulingResult struct {
+		// Add scheduling-specific fields
 	}
-}
+
+	func NewSchedulingResult(...) *DetailAnalysisResult {
+		return &DetailAnalysisResult{
+			Category: SchedulingCategory,
+			SchedulingData: &SchedulingResult{...},
+		}
+	}
 */

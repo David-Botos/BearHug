@@ -260,6 +260,8 @@ func findMatchingService(inf capacityInference, services []hsds_types.Service) *
 	var bestMatch *hsds_types.Service
 	highestSimilarity := 0.0
 
+	// TODO: if needed LLM inference
+
 	for _, svc := range services {
 		similarity := calculateStringSimilarity(normalizedInfName, strings.ToLower(strings.TrimSpace(svc.Name)))
 		if similarity > threshold && similarity > highestSimilarity {

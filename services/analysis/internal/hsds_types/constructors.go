@@ -7,8 +7,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// validateUUID ensures the string is a valid UUIDv4
-func validateUUID(u string) bool {
+// ValidateUUID ensures the string is a valid UUIDv4
+func ValidateUUID(u string) bool {
 	id, err := uuid.Parse(u)
 	if err != nil {
 		return false
@@ -47,7 +47,7 @@ func NewOrganization(name, description string, opts *OrganizationOptions) (*Orga
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -60,7 +60,7 @@ func NewOrganization(name, description string, opts *OrganizationOptions) (*Orga
 	}
 
 	if opts != nil {
-		if opts.ParentOrganizationID != nil && !validateUUID(*opts.ParentOrganizationID) {
+		if opts.ParentOrganizationID != nil && !ValidateUUID(*opts.ParentOrganizationID) {
 			return nil, fmt.Errorf("invalid parent organization ID format: must be UUIDv4")
 		}
 		org.ParentOrganizationID = opts.ParentOrganizationID
@@ -85,14 +85,14 @@ type OrganizationIdentifierOptions struct {
 
 // NewOrganizationIdentifier creates a new OrganizationIdentifier with required fields and optional fields
 func NewOrganizationIdentifier(organizationID, identifierType, identifier string, opts *OrganizationIdentifierOptions) (*OrganizationIdentifier, error) {
-	if !validateUUID(organizationID) {
+	if !ValidateUUID(organizationID) {
 		return nil, fmt.Errorf("invalid organization ID format: must be UUIDv4")
 	}
 
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -124,7 +124,7 @@ func NewURL(url string, opts *URLOptions) (*URL, error) {
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -136,10 +136,10 @@ func NewURL(url string, opts *URLOptions) (*URL, error) {
 	}
 
 	if opts != nil {
-		if opts.OrganizationID != nil && !validateUUID(*opts.OrganizationID) {
+		if opts.OrganizationID != nil && !ValidateUUID(*opts.OrganizationID) {
 			return nil, fmt.Errorf("invalid organization ID format: must be UUIDv4")
 		}
-		if opts.ServiceID != nil && !validateUUID(*opts.ServiceID) {
+		if opts.ServiceID != nil && !ValidateUUID(*opts.ServiceID) {
 			return nil, fmt.Errorf("invalid service ID format: must be UUIDv4")
 		}
 		urlObj.OrganizationID = opts.OrganizationID
@@ -161,7 +161,7 @@ func NewFunding(opts *FundingOptions) (*Funding, error) {
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -172,10 +172,10 @@ func NewFunding(opts *FundingOptions) (*Funding, error) {
 	}
 
 	if opts != nil {
-		if opts.OrganizationID != nil && !validateUUID(*opts.OrganizationID) {
+		if opts.OrganizationID != nil && !ValidateUUID(*opts.OrganizationID) {
 			return nil, fmt.Errorf("invalid organization ID format: must be UUIDv4")
 		}
-		if opts.ServiceID != nil && !validateUUID(*opts.ServiceID) {
+		if opts.ServiceID != nil && !ValidateUUID(*opts.ServiceID) {
 			return nil, fmt.Errorf("invalid service ID format: must be UUIDv4")
 		}
 		funding.OrganizationID = opts.OrganizationID
@@ -197,7 +197,7 @@ func NewUnit(name string, opts *UnitOptions) (*Unit, error) {
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -223,14 +223,14 @@ type ProgramOptions struct {
 }
 
 func NewProgram(organizationID, name, description string, opts *ProgramOptions) (*Program, error) {
-	if !validateUUID(organizationID) {
+	if !ValidateUUID(organizationID) {
 		return nil, fmt.Errorf("invalid organization ID format: must be UUIDv4")
 	}
 
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -274,14 +274,14 @@ type ServiceOptions struct {
 }
 
 func NewService(organizationID, name string, status ServiceStatusEnum, opts *ServiceOptions) (*Service, error) {
-	if !validateUUID(organizationID) {
+	if !ValidateUUID(organizationID) {
 		return nil, fmt.Errorf("invalid organization ID format: must be UUIDv4")
 	}
 
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -295,7 +295,7 @@ func NewService(organizationID, name string, status ServiceStatusEnum, opts *Ser
 	}
 
 	if opts != nil {
-		if opts.ProgramID != nil && !validateUUID(*opts.ProgramID) {
+		if opts.ProgramID != nil && !ValidateUUID(*opts.ProgramID) {
 			return nil, fmt.Errorf("invalid program ID format: must be UUIDv4")
 		}
 		service.ProgramID = opts.ProgramID
@@ -337,7 +337,7 @@ func NewServiceArea(opts *ServiceAreaOptions) (*ServiceArea, error) {
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -348,10 +348,10 @@ func NewServiceArea(opts *ServiceAreaOptions) (*ServiceArea, error) {
 	}
 
 	if opts != nil {
-		if opts.ServiceID != nil && !validateUUID(*opts.ServiceID) {
+		if opts.ServiceID != nil && !ValidateUUID(*opts.ServiceID) {
 			return nil, fmt.Errorf("invalid service ID format: must be UUIDv4")
 		}
-		if opts.ServiceAtLocationID != nil && !validateUUID(*opts.ServiceAtLocationID) {
+		if opts.ServiceAtLocationID != nil && !ValidateUUID(*opts.ServiceAtLocationID) {
 			return nil, fmt.Errorf("invalid service at location ID format: must be UUIDv4")
 		}
 		serviceArea.ServiceID = opts.ServiceID
@@ -372,17 +372,17 @@ type ServiceAtLocationOptions struct {
 }
 
 func NewServiceAtLocation(serviceID, locationID string, opts *ServiceAtLocationOptions) (*ServiceAtLocation, error) {
-	if !validateUUID(serviceID) {
+	if !ValidateUUID(serviceID) {
 		return nil, fmt.Errorf("invalid service ID format: must be UUIDv4")
 	}
-	if !validateUUID(locationID) {
+	if !ValidateUUID(locationID) {
 		return nil, fmt.Errorf("invalid location ID format: must be UUIDv4")
 	}
 
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -419,7 +419,7 @@ func NewLocation(locationType LocationLocationTypeEnum, opts *LocationOptions) (
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -431,7 +431,7 @@ func NewLocation(locationType LocationLocationTypeEnum, opts *LocationOptions) (
 	}
 
 	if opts != nil {
-		if opts.OrganizationID != nil && !validateUUID(*opts.OrganizationID) {
+		if opts.OrganizationID != nil && !ValidateUUID(*opts.OrganizationID) {
 			return nil, fmt.Errorf("invalid organization ID format: must be UUIDv4")
 		}
 		location.OrganizationID = opts.OrganizationID
@@ -465,7 +465,7 @@ func NewAddress(
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -486,7 +486,7 @@ func NewAddress(
 	}
 
 	if opts != nil {
-		if opts.LocationID != nil && !validateUUID(*opts.LocationID) {
+		if opts.LocationID != nil && !ValidateUUID(*opts.LocationID) {
 			return nil, fmt.Errorf("invalid location ID format: must be UUIDv4")
 		}
 		address.LocationID = opts.LocationID
@@ -509,7 +509,7 @@ func NewRequiredDocument(opts *RequiredDocumentOptions) (*RequiredDocument, erro
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -520,7 +520,7 @@ func NewRequiredDocument(opts *RequiredDocumentOptions) (*RequiredDocument, erro
 	}
 
 	if opts != nil {
-		if opts.ServiceID != nil && !validateUUID(*opts.ServiceID) {
+		if opts.ServiceID != nil && !ValidateUUID(*opts.ServiceID) {
 			return nil, fmt.Errorf("invalid service ID format: must be UUIDv4")
 		}
 		requiredDocument.ServiceID = opts.ServiceID
@@ -545,7 +545,7 @@ func NewLanguage(opts *LanguageOptions) (*Language, error) {
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -556,13 +556,13 @@ func NewLanguage(opts *LanguageOptions) (*Language, error) {
 	}
 
 	if opts != nil {
-		if opts.ServiceID != nil && !validateUUID(*opts.ServiceID) {
+		if opts.ServiceID != nil && !ValidateUUID(*opts.ServiceID) {
 			return nil, fmt.Errorf("invalid service ID format: must be UUIDv4")
 		}
-		if opts.LocationID != nil && !validateUUID(*opts.LocationID) {
+		if opts.LocationID != nil && !ValidateUUID(*opts.LocationID) {
 			return nil, fmt.Errorf("invalid location ID format: must be UUIDv4")
 		}
-		if opts.PhoneID != nil && !validateUUID(*opts.PhoneID) {
+		if opts.PhoneID != nil && !ValidateUUID(*opts.PhoneID) {
 			return nil, fmt.Errorf("invalid phone ID format: must be UUIDv4")
 		}
 		language.ServiceID = opts.ServiceID
@@ -588,7 +588,7 @@ func NewAccessibility(opts *AccessibilityOptions) (*Accessibility, error) {
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -599,7 +599,7 @@ func NewAccessibility(opts *AccessibilityOptions) (*Accessibility, error) {
 	}
 
 	if opts != nil {
-		if opts.LocationID != nil && !validateUUID(*opts.LocationID) {
+		if opts.LocationID != nil && !ValidateUUID(*opts.LocationID) {
 			return nil, fmt.Errorf("invalid location ID format: must be UUIDv4")
 		}
 		accessibility.LocationID = opts.LocationID
@@ -619,14 +619,14 @@ type AttributeOptions struct {
 }
 
 func NewAttribute(taxonomyTermID, linkID, linkEntity string, opts *AttributeOptions) (*Attribute, error) {
-	if !validateUUID(taxonomyTermID) {
+	if !ValidateUUID(taxonomyTermID) {
 		return nil, fmt.Errorf("invalid taxonomy term ID format: must be UUIDv4")
 	}
 
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -658,7 +658,7 @@ func NewTaxonomy(name, description string, opts *TaxonomyOptions) (*Taxonomy, er
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -692,7 +692,7 @@ func NewTaxonomyTerm(name, description string, opts *TaxonomyTermOptions) (*Taxo
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -705,10 +705,10 @@ func NewTaxonomyTerm(name, description string, opts *TaxonomyTermOptions) (*Taxo
 	}
 
 	if opts != nil {
-		if opts.TaxonomyID != nil && !validateUUID(*opts.TaxonomyID) {
+		if opts.TaxonomyID != nil && !ValidateUUID(*opts.TaxonomyID) {
 			return nil, fmt.Errorf("invalid taxonomy ID format: must be UUIDv4")
 		}
-		if opts.ParentID != nil && !validateUUID(*opts.ParentID) {
+		if opts.ParentID != nil && !ValidateUUID(*opts.ParentID) {
 			return nil, fmt.Errorf("invalid parent ID format: must be UUIDv4")
 		}
 		taxonomyTerm.TaxonomyID = opts.TaxonomyID
@@ -738,7 +738,7 @@ func NewContact(opts *ContactOptions) (*Contact, error) {
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -749,16 +749,16 @@ func NewContact(opts *ContactOptions) (*Contact, error) {
 	}
 
 	if opts != nil {
-		if opts.OrganizationID != nil && !validateUUID(*opts.OrganizationID) {
+		if opts.OrganizationID != nil && !ValidateUUID(*opts.OrganizationID) {
 			return nil, fmt.Errorf("invalid organization ID format: must be UUIDv4")
 		}
-		if opts.ServiceID != nil && !validateUUID(*opts.ServiceID) {
+		if opts.ServiceID != nil && !ValidateUUID(*opts.ServiceID) {
 			return nil, fmt.Errorf("invalid service ID format: must be UUIDv4")
 		}
-		if opts.ServiceAtLocationID != nil && !validateUUID(*opts.ServiceAtLocationID) {
+		if opts.ServiceAtLocationID != nil && !ValidateUUID(*opts.ServiceAtLocationID) {
 			return nil, fmt.Errorf("invalid service at location ID format: must be UUIDv4")
 		}
-		if opts.LocationID != nil && !validateUUID(*opts.LocationID) {
+		if opts.LocationID != nil && !ValidateUUID(*opts.LocationID) {
 			return nil, fmt.Errorf("invalid location ID format: must be UUIDv4")
 		}
 		contact.OrganizationID = opts.OrganizationID
@@ -790,7 +790,7 @@ func NewPhone(number string, opts *PhoneOptions) (*Phone, error) {
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -802,19 +802,19 @@ func NewPhone(number string, opts *PhoneOptions) (*Phone, error) {
 	}
 
 	if opts != nil {
-		if opts.LocationID != nil && !validateUUID(*opts.LocationID) {
+		if opts.LocationID != nil && !ValidateUUID(*opts.LocationID) {
 			return nil, fmt.Errorf("invalid location ID format: must be UUIDv4")
 		}
-		if opts.ServiceID != nil && !validateUUID(*opts.ServiceID) {
+		if opts.ServiceID != nil && !ValidateUUID(*opts.ServiceID) {
 			return nil, fmt.Errorf("invalid service ID format: must be UUIDv4")
 		}
-		if opts.OrganizationID != nil && !validateUUID(*opts.OrganizationID) {
+		if opts.OrganizationID != nil && !ValidateUUID(*opts.OrganizationID) {
 			return nil, fmt.Errorf("invalid organization ID format: must be UUIDv4")
 		}
-		if opts.ContactID != nil && !validateUUID(*opts.ContactID) {
+		if opts.ContactID != nil && !ValidateUUID(*opts.ContactID) {
 			return nil, fmt.Errorf("invalid contact ID format: must be UUIDv4")
 		}
-		if opts.ServiceAtLocationID != nil && !validateUUID(*opts.ServiceAtLocationID) {
+		if opts.ServiceAtLocationID != nil && !ValidateUUID(*opts.ServiceAtLocationID) {
 			return nil, fmt.Errorf("invalid service at location ID format: must be UUIDv4")
 		}
 		phone.LocationID = opts.LocationID
@@ -860,7 +860,7 @@ func NewSchedule(opts *ScheduleOptions) (*Schedule, error) {
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -871,13 +871,13 @@ func NewSchedule(opts *ScheduleOptions) (*Schedule, error) {
 	}
 
 	if opts != nil {
-		if opts.ServiceID != nil && !validateUUID(*opts.ServiceID) {
+		if opts.ServiceID != nil && !ValidateUUID(*opts.ServiceID) {
 			return nil, fmt.Errorf("invalid service ID format: must be UUIDv4")
 		}
-		if opts.LocationID != nil && !validateUUID(*opts.LocationID) {
+		if opts.LocationID != nil && !ValidateUUID(*opts.LocationID) {
 			return nil, fmt.Errorf("invalid location ID format: must be UUIDv4")
 		}
-		if opts.ServiceAtLocationID != nil && !validateUUID(*opts.ServiceAtLocationID) {
+		if opts.ServiceAtLocationID != nil && !ValidateUUID(*opts.ServiceAtLocationID) {
 			return nil, fmt.Errorf("invalid service at location ID format: must be UUIDv4")
 		}
 		schedule.ServiceID = opts.ServiceID
@@ -914,17 +914,17 @@ type ServiceCapacityOptions struct {
 }
 
 func NewServiceCapacity(serviceID, unitID string, available float64, opts *ServiceCapacityOptions) (*ServiceCapacity, error) {
-	if !validateUUID(serviceID) {
+	if !ValidateUUID(serviceID) {
 		return nil, fmt.Errorf("invalid service ID format: must be UUIDv4")
 	}
-	if !validateUUID(unitID) {
+	if !ValidateUUID(unitID) {
 		return nil, fmt.Errorf("invalid unit ID format: must be UUIDv4")
 	}
 
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -957,14 +957,14 @@ type CostOptionOptions struct {
 }
 
 func NewCostOption(serviceID string, opts *CostOptionOptions) (*CostOption, error) {
-	if !validateUUID(serviceID) {
+	if !ValidateUUID(serviceID) {
 		return nil, fmt.Errorf("invalid service ID format: must be UUIDv4")
 	}
 
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -1010,7 +1010,7 @@ func NewMetadata(
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 
@@ -1043,7 +1043,7 @@ func NewMetaTableDescription(opts *MetaTableDescriptionOptions) (*MetaTableDescr
 	now := getICalTime()
 	id := newUUIDV4()
 
-	if !validateUUID(id) {
+	if !ValidateUUID(id) {
 		return nil, fmt.Errorf("failed to generate valid UUIDv4")
 	}
 

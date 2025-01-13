@@ -36,20 +36,7 @@ func (sc ServiceCategory) IsValid() bool {
 }
 
 type TranscriptsReqBody struct {
-	Organization      string            `json:"organization"`
-	ServiceCategories []ServiceCategory `json:"serviceCategories"`
-	RoomURL           string            `json:"room_url"`
-	Transcript        string            `json:"transcript"`
-}
-
-type StoreCallDataParams struct {
-	Organization string `json:"organization"`
-	RoomURL      string `json:"room_url"`
-	Transcript   string `json:"transcript"`
-}
-
-type ProcessTranscriptParams struct {
-	ServiceCategories []ServiceCategory `json:"serviceCategories"`
-	RoomURL           string            `json:"room_url"`
-	Transcript        string            `json:"transcript"`
+	OrganizationID string `json:"organization_id"`
+	RoomURL        string `json:"room_url"`
+	Transcript     string `json:"transcript"`
 }

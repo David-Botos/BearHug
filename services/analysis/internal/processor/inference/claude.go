@@ -6,6 +6,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
+
+	"github.com/david-botos/BearHug/services/analysis/pkg/logger"
+	"github.com/joho/godotenv"
 )
 
 type PromptParams struct {
@@ -73,6 +78,41 @@ type Usage struct {
 	CacheCreationInputTokens int `json:"cache_creation_input_tokens"`
 	CacheReadInputTokens     int `json:"cache_read_input_tokens"`
 	OutputTokens             int `json:"output_tokens"`
+}
+
+// initInferenceClient initializes the Claude inference client
+func InitInferenceClient() (*ClaudeClient, error) {
+	log := logger.Get()
+
+	workingDir, err := os.Getwd()
+	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("Failed to get working directory for environment setup")
+		return nil, fmt.Errorf("failed to get working directory: %w", err)
+	}
+
+	envPath := filepath.Join(workingDir, ".env")
+	if err := godotenv.Load(envPath); err != nil {
+		log.Error().
+			Err(err).
+			Str("env_path", envPath).
+			Msg("Failed to load environment file")
+		return nil, fmt.Errorf("failed to load env file: %w", err)
+	}
+
+	apiKey := os.Getenv("ANTHROPIC_API_KEY")
+	if apiKey == "" {
+		log.Error().Msg("ANTHROPIC_API_KEY not found in environment")
+		return nil, fmt.Errorf("ANTHROPIC_API_KEY not found in environment")
+	}
+
+	log.Debug().
+		Str("env_path", envPath).
+		Int("api_key_length", len(apiKey)).
+		Msg("Successfully initialized inference client configuration")
+
+	return NewClient(apiKey), nil
 }
 
 // RunClaudeInference performs inference with structured output validation

@@ -55,134 +55,124 @@ func ValidateExtractedInfo(extractedDetails []*structOutputs.DetailAnalysisResul
 	return submitValidatedOutputRes, nil
 
 	/*
-		// Extract the most valuable information to identify potential hallucinations and duplicates
-		extractedDetailStrings := buildValidationString(extractedDetails, serviceCtx)
+			// Extract the most valuable information to identify potential hallucinations and duplicates
+			extractedDetailStrings := buildValidationString(extractedDetails, serviceCtx)
 
-		// Create a prompt and schema for looping validation runs
-		validationPrompt, validationSchema, validationPromptGenErr := generateValidationPrompt(extractedDetailStrings, transcript)
-		if validationPromptGenErr != nil {
-			return false, fmt.Errorf(`Error when generating the validation prompt: %w`, validationPromptGenErr)
-		}
+			// Create a prompt and schema for looping validation runs
+			validationPrompt, validationSchema, validationPromptGenErr := generateValidationPrompt(extractedDetailStrings, transcript)
+			if validationPromptGenErr != nil {
+				return false, fmt.Errorf(`Error when generating the validation prompt: %w`, validationPromptGenErr)
+			}
 
 		// Declare Claude Inference Client
-		workingDir, err := os.Getwd()
-		if err != nil {
-			panic(err)
-		}
-		envPath := filepath.Join(workingDir, ".env")
-		if err := godotenv.Load(envPath); err != nil {
-			panic(err)
-		}
-		fmt.Printf("envPath declared as: %s\n", envPath)
-		client := inference.NewClient(os.Getenv("ANTHROPIC_API_KEY"))
-		fmt.Printf("Initialized client with API key length: %d\n", len(os.Getenv("ANTHROPIC_API_KEY")))
+		client, err := inference.InitInferenceClient()
 
-		// Run inference
-		validationOutput, validationInfErr := client.RunClaudeInference(inference.PromptParams{Prompt: validationPrompt, Schema: validationSchema})
-		if validationInfErr != nil {
-			return false, fmt.Errorf(`Error when running validation inference: %w`, validationInfErr)
-		}
-
-		// First, get the raw JSON bytes from the inference output
-		jsonData, err := json.Marshal(validationOutput)
-		if err != nil {
-			return false, fmt.Errorf("error marshaling validation output: %w", err)
-		}
-
-		// Create our ValidationOutput struct
-		var typedOutput ValidationOutput
-
-		// Unmarshal the JSON into our struct
-		if err := json.Unmarshal(jsonData, &typedOutput); err != nil {
-			return false, fmt.Errorf("error unmarshaling validation output: %w", err)
-		}
-
-		if typedOutput.IsValid {
-			submitValidatedOutputRes, submitValidatedOutputErr := SubmitValidatedOutput(extractedDetails)
-			if submitValidatedOutputErr != nil {
-				return false, fmt.Errorf(`Error occurred when submitting validated output in supa: %w`, &submitValidatedOutputErr)
+			// Run inference
+			validationOutput, validationInfErr := client.RunClaudeInference(inference.PromptParams{Prompt: validationPrompt, Schema: validationSchema})
+			if validationInfErr != nil {
+				return false, fmt.Errorf(`Error when running validation inference: %w`, validationInfErr)
 			}
-			return submitValidatedOutputRes, nil
-		} else {
-			var fixAttempts []FixAttempt
-			maxIterations := 3
-			currentIteration := 0
-			currentDetails := extractedDetails
-			currentServiceCtx := serviceCtx
 
-			for currentIteration < maxIterations {
-				attempt := FixAttempt{
-					ValidationItems: typedOutput.Validation,
-					Iteration:       currentIteration,
+			// First, get the raw JSON bytes from the inference output
+			jsonData, err := json.Marshal(validationOutput)
+			if err != nil {
+				return false, fmt.Errorf("error marshaling validation output: %w", err)
+			}
+
+			// Create our ValidationOutput struct
+			var typedOutput ValidationOutput
+
+			// Unmarshal the JSON into our struct
+			if err := json.Unmarshal(jsonData, &typedOutput); err != nil {
+				return false, fmt.Errorf("error unmarshaling validation output: %w", err)
+			}
+
+			if typedOutput.IsValid {
+				submitValidatedOutputRes, submitValidatedOutputErr := SubmitValidatedOutput(extractedDetails)
+				if submitValidatedOutputErr != nil {
+					return false, fmt.Errorf(`Error occurred when submitting validated output in supa: %w`, &submitValidatedOutputErr)
 				}
+				return submitValidatedOutputRes, nil
+			} else {
+				var fixAttempts []FixAttempt
+				maxIterations := 3
+				currentIteration := 0
+				currentDetails := extractedDetails
+				currentServiceCtx := serviceCtx
 
-				sortedIssues := prioritizeIssues(typedOutput.Validation)
-
-				fixedDetails, fixedServiceCtx, fixErr := fixOutputWithInference(
-					currentDetails,
-					currentServiceCtx,
-					sortedIssues,
-					transcript,
-					client,
-				)
-				if fixErr != nil {
-					return false, fmt.Errorf("error during fix attempt %d: %w", currentIteration, fixErr)
-				}
-
-				// Validate the fixed output
-				fixedDetailString := buildValidationString(fixedDetails, fixedServiceCtx)
-				validationPrompt, validationSchema, err := generateValidationPrompt(fixedDetailString, transcript)
-				if err != nil {
-					return false, fmt.Errorf("error generating validation prompt after fix: %w", err)
-				}
-				// Run validation on fixed output
-				newValidationOutput, valErr := client.RunClaudeInference(inference.PromptParams{
-					Prompt: validationPrompt,
-					Schema: validationSchema,
-				})
-				if valErr != nil {
-					return false, fmt.Errorf("error validating fixed output: %w", valErr)
-				}
-
-				// Parse validation results
-				var newTypedOutput ValidationOutput
-				newJsonData, _ := json.Marshal(newValidationOutput)
-				if err := json.Unmarshal(newJsonData, &newTypedOutput); err != nil {
-					return false, fmt.Errorf("error parsing validation after fix: %w", err)
-				}
-
-				// Check if we've improved
-				if newTypedOutput.IsValid {
-					submitValidatedOutputRes, submitValidatedOutputErr := SubmitValidatedOutput(fixedDetails)
-					if submitValidatedOutputErr != nil {
-						return false, fmt.Errorf(`Error occurred when submitting validated output in supa: %w`, submitValidatedOutputErr)
+				for currentIteration < maxIterations {
+					attempt := FixAttempt{
+						ValidationItems: typedOutput.Validation,
+						Iteration:       currentIteration,
 					}
-					return submitValidatedOutputRes, nil
+
+					sortedIssues := prioritizeIssues(typedOutput.Validation)
+
+					fixedDetails, fixedServiceCtx, fixErr := fixOutputWithInference(
+						currentDetails,
+						currentServiceCtx,
+						sortedIssues,
+						transcript,
+						client,
+					)
+					if fixErr != nil {
+						return false, fmt.Errorf("error during fix attempt %d: %w", currentIteration, fixErr)
+					}
+
+					// Validate the fixed output
+					fixedDetailString := buildValidationString(fixedDetails, fixedServiceCtx)
+					validationPrompt, validationSchema, err := generateValidationPrompt(fixedDetailString, transcript)
+					if err != nil {
+						return false, fmt.Errorf("error generating validation prompt after fix: %w", err)
+					}
+					// Run validation on fixed output
+					newValidationOutput, valErr := client.RunClaudeInference(inference.PromptParams{
+						Prompt: validationPrompt,
+						Schema: validationSchema,
+					})
+					if valErr != nil {
+						return false, fmt.Errorf("error validating fixed output: %w", valErr)
+					}
+
+					// Parse validation results
+					var newTypedOutput ValidationOutput
+					newJsonData, _ := json.Marshal(newValidationOutput)
+					if err := json.Unmarshal(newJsonData, &newTypedOutput); err != nil {
+						return false, fmt.Errorf("error parsing validation after fix: %w", err)
+					}
+
+					// Check if we've improved
+					if newTypedOutput.IsValid {
+						submitValidatedOutputRes, submitValidatedOutputErr := SubmitValidatedOutput(fixedDetails)
+						if submitValidatedOutputErr != nil {
+							return false, fmt.Errorf(`Error occurred when submitting validated output in supa: %w`, submitValidatedOutputErr)
+						}
+						return submitValidatedOutputRes, nil
+					}
+
+					// Check if we've made progress
+					if len(newTypedOutput.Validation) >= len(typedOutput.Validation) {
+						// We haven't improved or have made things worse
+						// TODO: Break the loop and flag for human review
+						break
+					}
+
+					// Update for next iteration
+					currentDetails = fixedDetails
+					currentServiceCtx = fixedServiceCtx
+					typedOutput = newTypedOutput
+					currentIteration++
+
+					// Store attempt results
+					attempt.FixedItems = newTypedOutput.Validation
+					attempt.Successful = false
+					fixAttempts = append(fixAttempts, attempt)
 				}
-
-				// Check if we've made progress
-				if len(newTypedOutput.Validation) >= len(typedOutput.Validation) {
-					// We haven't improved or have made things worse
-					// TODO: Break the loop and flag for human review
-					break
-				}
-
-				// Update for next iteration
-				currentDetails = fixedDetails
-				currentServiceCtx = fixedServiceCtx
-				typedOutput = newTypedOutput
-				currentIteration++
-
-				// Store attempt results
-				attempt.FixedItems = newTypedOutput.Validation
-				attempt.Successful = false
-				fixAttempts = append(fixAttempts, attempt)
+				// If we get here, we've exceeded max iterations or haven't improved
+				// Flag for human review
+				// TODO: Store fixAttempts history for human review
+				return false, nil
 			}
-			// If we get here, we've exceeded max iterations or haven't improved
-			// Flag for human review
-			// TODO: Store fixAttempts history for human review
-			return false, nil
-		}
 	*/
 }
 

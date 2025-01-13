@@ -4,14 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/agnivade/levenshtein"
 	"github.com/david-botos/BearHug/services/analysis/internal/hsds_types"
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/inference"
-	"github.com/joho/godotenv"
 )
 
 func GenerateServiceCapacityPrompt(transcript string, serviceCtx ServiceContext) (string, inference.ToolInputSchema, error) {
@@ -21,7 +18,7 @@ func GenerateServiceCapacityPrompt(transcript string, serviceCtx ServiceContext)
 
 	// Process existing services
 	for _, service := range serviceCtx.ExistingServices {
-		writeServiceDescription(&existingServiceDesc, service)
+		writeServiceDescription(&existingServiceDesc, *service)
 	}
 
 	// Process new services
@@ -106,17 +103,7 @@ func analyzeCapacityDetails(transcript string, serviceCtx ServiceContext) (Detai
 	}
 
 	// Declare Claude Inference Client
-	workingDir, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	envPath := filepath.Join(workingDir, ".env")
-	if err := godotenv.Load(envPath); err != nil {
-		panic(err)
-	}
-	fmt.Printf("envPath declared as: %s\n", envPath)
-	client := inference.NewClient(os.Getenv("ANTHROPIC_API_KEY"))
-	fmt.Printf("Initialized client with API key length: %d\n", len(os.Getenv("ANTHROPIC_API_KEY")))
+	client, err := inference.InitInferenceClient()
 
 	// Run inference
 	unformattedCapacityDetails, inferenceErr := client.RunClaudeInference(inference.PromptParams{Prompt: capacityCategoryPrompt, Schema: capacitySchema})
@@ -165,10 +152,10 @@ func infToCapacityAndUnits(inferenceResult map[string]interface{}, serviceCtx Se
 	}
 
 	// Combine existing and new services into a single array
-	totalServices := make([]hsds_types.Service, 0, len(serviceCtx.ExistingServices)+len(serviceCtx.NewServices))
+	totalServices := make([]*hsds_types.Service, 0, len(serviceCtx.ExistingServices)+len(serviceCtx.NewServices))
 	totalServices = append(totalServices, serviceCtx.ExistingServices...)
 	for _, newService := range serviceCtx.NewServices {
-		totalServices = append(totalServices, *newService)
+		totalServices = append(totalServices, newService)
 	}
 
 	// Track matching results
@@ -237,13 +224,13 @@ func infToCapacityAndUnits(inferenceResult map[string]interface{}, serviceCtx Se
 }
 
 // findMatchingService attempts to find the corresponding service for a capacity
-func findMatchingService(inf capacityInference, services []hsds_types.Service) *hsds_types.Service {
+func findMatchingService(inf capacityInference, services []*hsds_types.Service) *hsds_types.Service {
 	normalizedInfName := strings.ToLower(strings.TrimSpace(inf.ServiceName))
 
 	// First try exact name match
 	for _, svc := range services {
 		if strings.ToLower(strings.TrimSpace(svc.Name)) == normalizedInfName {
-			return &svc
+			return svc
 		}
 	}
 
@@ -251,7 +238,7 @@ func findMatchingService(inf capacityInference, services []hsds_types.Service) *
 	for _, svc := range services {
 		if svc.AlternateName != nil &&
 			strings.ToLower(strings.TrimSpace(*svc.AlternateName)) == normalizedInfName {
-			return &svc
+			return svc
 		}
 	}
 
@@ -266,7 +253,7 @@ func findMatchingService(inf capacityInference, services []hsds_types.Service) *
 		similarity := calculateStringSimilarity(normalizedInfName, strings.ToLower(strings.TrimSpace(svc.Name)))
 		if similarity > threshold && similarity > highestSimilarity {
 			highestSimilarity = similarity
-			bestMatch = &svc
+			bestMatch = svc
 		}
 
 		if svc.AlternateName != nil {
@@ -274,7 +261,7 @@ func findMatchingService(inf capacityInference, services []hsds_types.Service) *
 				strings.ToLower(strings.TrimSpace(*svc.AlternateName)))
 			if altNameSimilarity > threshold && altNameSimilarity > highestSimilarity {
 				highestSimilarity = altNameSimilarity
-				bestMatch = &svc
+				bestMatch = svc
 			}
 		}
 	}

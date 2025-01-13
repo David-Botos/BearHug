@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/david-botos/BearHug/services/analysis/internal/hsds_types"
@@ -13,11 +14,18 @@ import (
 	"github.com/joho/godotenv"
 )
 
+type ValidationItemType string
+
+const (
+	HallucinationFlag ValidationItemType = "HALLUCINATION"
+	DuplicateFlag     ValidationItemType = "DUPLICATE"
+)
+
 // ValidationItem represents a single validation issue identified by the inference
 type ValidationItem struct {
-	Type       string   `json:"type"`        // "HALLUCINATION" or "DUPLICATE"
-	ObjectType string   `json:"object_type"` // "SERVICE", "CAPACITY", or "UNIT"
-	IDs        []string `json:"ids"`
+	Type       ValidationItemType `json:"type"`        // "HALLUCINATION" or "DUPLICATE"
+	ObjectType DetailObjectType   `json:"object_type"` // "SERVICE", "CAPACITY", or "UNIT"
+	IDs        []string           `json:"ids"`
 	// Fields for Hallucinations
 	IdentifiedSnippet   string  `json:"identified_snippet,omitempty"`
 	Reasoning           string  `json:"reasoning,omitempty"`
@@ -32,6 +40,13 @@ type ValidationItem struct {
 type ValidationOutput struct {
 	Validation []ValidationItem `json:"validation"`
 	IsValid    bool             `json:"is_valid"`
+}
+
+type FixAttempt struct {
+	ValidationItems []ValidationItem
+	FixedItems      []ValidationItem
+	Successful      bool
+	Iteration       int
 }
 
 func ValidateExtractedInfo(extractedDetails []*structOutputs.DetailAnalysisResult, serviceCtx structOutputs.ServiceContext, transcript string) (bool, error) {
@@ -79,29 +94,89 @@ func ValidateExtractedInfo(extractedDetails []*structOutputs.DetailAnalysisResul
 	}
 
 	if typedOutput.IsValid {
-		// submit the information to supabase
-		return true, nil
+		submitValidatedOutputRes, submitValidatedOutputErr := SubmitValidatedOutput(extractedDetails)
+		if submitValidatedOutputErr != nil {
+			return false, fmt.Errorf(`Error occurred when submitting validated output in supa: %w`, &submitValidatedOutputErr)
+		}
+		return submitValidatedOutputRes, nil
 	} else {
-		/*
-			Create a while loop with an iterator that defines a maximum number of reasoning loops before it needs to flag the result for human review
+		var fixAttempts []FixAttempt
+		maxIterations := 3
+		currentIteration := 0
+		currentDetails := extractedDetails
+		currentServiceCtx := serviceCtx
 
-			do reasoning and output ValidationResult
-
-			if IsValid == false {
-
+		for currentIteration < maxIterations {
+			attempt := FixAttempt{
+				ValidationItems: typedOutput.Validation,
+				Iteration:       currentIteration,
 			}
-			break
-		*/
 
-		/*
-			if !validationResult.IsValid {
-				flag the result for human review
-				return false, nil
-			} else {
-				submit the info to supabase
-				return true, nil
+			sortedIssues := prioritizeIssues(typedOutput.Validation)
+
+			fixedDetails, fixedServiceCtx, fixErr := fixOutputWithInference(
+				currentDetails,
+				currentServiceCtx,
+				sortedIssues,
+				transcript,
+				client,
+			)
+			if fixErr != nil {
+				return false, fmt.Errorf("error during fix attempt %d: %w", currentIteration, fixErr)
 			}
-		*/
+
+			// Validate the fixed output
+			fixedDetailString := buildValidationString(fixedDetails, fixedServiceCtx)
+			validationPrompt, validationSchema, err := generateValidationPrompt(fixedDetailString, transcript)
+			if err != nil {
+				return false, fmt.Errorf("error generating validation prompt after fix: %w", err)
+			}
+			// Run validation on fixed output
+			newValidationOutput, valErr := client.RunClaudeInference(inference.PromptParams{
+				Prompt: validationPrompt,
+				Schema: validationSchema,
+			})
+			if valErr != nil {
+				return false, fmt.Errorf("error validating fixed output: %w", valErr)
+			}
+
+			// Parse validation results
+			var newTypedOutput ValidationOutput
+			newJsonData, _ := json.Marshal(newValidationOutput)
+			if err := json.Unmarshal(newJsonData, &newTypedOutput); err != nil {
+				return false, fmt.Errorf("error parsing validation after fix: %w", err)
+			}
+
+			// Check if we've improved
+			if newTypedOutput.IsValid {
+				submitValidatedOutputRes, submitValidatedOutputErr := SubmitValidatedOutput(fixedDetails)
+				if submitValidatedOutputErr != nil {
+					return false, fmt.Errorf(`Error occurred when submitting validated output in supa: %w`, submitValidatedOutputErr)
+				}
+				return submitValidatedOutputRes, nil
+			}
+
+			// Check if we've made progress
+			if len(newTypedOutput.Validation) >= len(typedOutput.Validation) {
+				// We haven't improved or have made things worse
+				// TODO: Break the loop and flag for human review
+				break
+			}
+
+			// Update for next iteration
+			currentDetails = fixedDetails
+			currentServiceCtx = fixedServiceCtx
+			typedOutput = newTypedOutput
+			currentIteration++
+
+			// Store attempt results
+			attempt.FixedItems = newTypedOutput.Validation
+			attempt.Successful = false
+			fixAttempts = append(fixAttempts, attempt)
+		}
+		// If we get here, we've exceeded max iterations or haven't improved
+		// Flag for human review
+		// TODO: Store fixAttempts history for human review
 		return false, nil
 	}
 }
@@ -205,4 +280,76 @@ func buildValidationString(extractedDetails []*structOutputs.DetailAnalysisResul
 	}
 
 	return builder.String()
+}
+
+// prioritizeIssues sorts validation items by confidence level and complexity
+func prioritizeIssues(items []ValidationItem) []ValidationItem {
+	// Create a copy to sort
+	sortedItems := make([]ValidationItem, len(items))
+	copy(sortedItems, items)
+
+	// Sort by confidence level for hallucinations and by number of conflicting fields for duplicates
+	sort.Slice(sortedItems, func(i, j int) bool {
+		if sortedItems[i].Type == "HALLUCINATION" && sortedItems[j].Type == "HALLUCINATION" {
+			return sortedItems[i].ConfidenceLevel > sortedItems[j].ConfidenceLevel
+		}
+		if sortedItems[i].Type == "DUPLICATE" && sortedItems[j].Type == "DUPLICATE" {
+			return len(sortedItems[i].ConflictingFields) < len(sortedItems[j].ConflictingFields)
+		}
+		// Prioritize hallucinations over duplicates
+		return sortedItems[i].Type == "HALLUCINATION"
+	})
+
+	return sortedItems
+}
+
+// fixOutputWithInference attempts to fix validation issues using Claude inference
+func fixOutputWithInference(
+	details []*structOutputs.DetailAnalysisResult,
+	serviceCtx structOutputs.ServiceContext,
+	issues []ValidationItem,
+	transcript string,
+	client *inference.ClaudeClient,
+) ([]*structOutputs.DetailAnalysisResult, structOutputs.ServiceContext, error) {
+	// 1. Build shared context maps
+	contextMaps := buildContextMaps(details, serviceCtx, issues)
+
+	// 2. Build context strings for the prompt (now using shared maps)
+	currentState, issuesSummary := buildFixContext(details, serviceCtx, issues, contextMaps)
+
+	// 3. Generate and run the fix prompt
+	fixPrompt, fixSchema, err := generateFixPrompt(currentState, issuesSummary, transcript)
+	if err != nil {
+		return nil, structOutputs.ServiceContext{}, fmt.Errorf("error generating fix prompt: %w", err)
+	}
+
+	// 4. Get fixes from Claude
+	fixOutput, err := client.RunClaudeInference(inference.PromptParams{
+		Prompt: fixPrompt,
+		Schema: fixSchema,
+	})
+	if err != nil {
+		return nil, structOutputs.ServiceContext{}, fmt.Errorf("error running fix inference: %w", err)
+	}
+
+	// 5. Parse the fix output
+	jsonData, err := json.Marshal(fixOutput)
+	if err != nil {
+		return nil, structOutputs.ServiceContext{}, fmt.Errorf("error marshaling inference result: %w", err)
+	}
+	var fixes FixOutput
+	if err := json.Unmarshal(jsonData, &fixes); err != nil {
+		return nil, structOutputs.ServiceContext{}, fmt.Errorf("error parsing fix output: %w", err)
+	}
+
+	// 6. Get maps of affected items using shared context
+	affectedServices, affectedCapacities := getAffectedItems(contextMaps)
+
+	// 7. Apply the fixes using our lookup maps
+	newDetails, newServiceCtx, err := applyFixes(fixes, affectedServices, affectedCapacities, details, serviceCtx)
+	if err != nil {
+		return nil, structOutputs.ServiceContext{}, fmt.Errorf("error applying fixes: %w", err)
+	}
+
+	return newDetails, newServiceCtx, nil
 }

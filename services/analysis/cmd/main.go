@@ -2,57 +2,13 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"os"
-	"strings"
 
 	"github.com/david-botos/BearHug/services/analysis/internal/processor"
 	"github.com/david-botos/BearHug/services/analysis/internal/supabase"
 	"github.com/david-botos/BearHug/services/analysis/internal/types"
-	"github.com/rs/zerolog"
+	"github.com/david-botos/BearHug/services/analysis/pkg/logger"
 )
-
-// Create a package-level logger variable
-var logger zerolog.Logger
-
-// initLogger initializes the global logger
-func initLogger() {
-	output := zerolog.ConsoleWriter{
-		Out:        os.Stdout,
-		TimeFormat: "15:04:05",
-		FormatLevel: func(i interface{}) string {
-			switch i.(string) {
-			case "info":
-				return "🟢 INFO"
-			case "debug":
-				return "🔍 DEBUG"
-			case "warn":
-				return "⚠️  WARN"
-			case "error":
-				return "❌ ERROR"
-			case "fatal":
-				return "💀 FATAL"
-			default:
-				return "   " + strings.ToUpper(fmt.Sprint(i))
-			}
-		},
-		FormatMessage: func(i interface{}) string {
-			return fmt.Sprintf("| %s |", i)
-		},
-		FormatFieldName: func(i interface{}) string {
-			return fmt.Sprintf("%s:", i)
-		},
-		FormatFieldValue: func(i interface{}) string {
-			return strings.ToUpper(fmt.Sprint(i))
-		},
-	}
-
-	logger = zerolog.New(output).
-		With().
-		Timestamp().
-		Logger()
-}
 
 type genServicesPrompt struct {
 	OrganizationID string `json:"organization_id"`
@@ -73,71 +29,102 @@ type ErrorDetail struct {
 }
 
 func handleTranscript(w http.ResponseWriter, r *http.Request) {
-	logger.Info().
+	log := logger.Get()
+	requestID := r.Header.Get("X-Request-ID")
+
+	log.Info().
 		Str("method", r.Method).
+		Str("path", r.URL.Path).
 		Str("remote_addr", r.RemoteAddr).
-		Msg("Received transcript request")
+		Str("request_id", requestID).
+		Msg("Processing incoming transcript request")
 
 	if r.Method != http.MethodPost {
-		logger.Warn().
+		log.Warn().
 			Str("method", r.Method).
-			Msg("Invalid method used")
+			Str("allowed_method", http.MethodPost).
+			Str("request_id", requestID).
+			Msg("Request rejected due to invalid HTTP method")
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	var reqBody types.TranscriptsReqBody
 	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
-		logger.Error().
+		log.Error().
 			Err(err).
-			Msg("Failed to decode request body")
+			Str("request_id", requestID).
+			Msg("Failed to parse request body as JSON")
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	logger.Info().
+	log.Info().
 		Str("organization_id", reqBody.OrganizationID).
 		Str("room_url", reqBody.RoomURL).
-		Msg("Processing transcript request")
+		Str("request_id", requestID).
+		Int("transcript_length", len(reqBody.Transcript)).
+		Msg("Initiating parallel processing operations")
 
 	// Store transcript asynchronously
 	go func() {
-		logger.Info().Msg("Starting async storage operation")
+		log.Info().
+			Str("request_id", requestID).
+			Str("organization_id", reqBody.OrganizationID).
+			Msg("Starting async transcript storage")
 
 		if err := supabase.StoreCallData(reqBody); err != nil {
-			logger.Error().
+			log.Error().
 				Err(err).
-				Msg("Failed to store transcript")
+				Str("request_id", requestID).
+				Str("organization_id", reqBody.OrganizationID).
+				Msg("Failed to persist transcript data in storage")
 			return
 		}
 
-		logger.Info().Msg("Successfully stored transcript data")
+		log.Info().
+			Str("request_id", requestID).
+			Str("organization_id", reqBody.OrganizationID).
+			Msg("Successfully persisted transcript data")
 	}()
 
 	// Process transcript asynchronously
 	go func() {
-		logger.Info().Msg("Starting async transcript processing")
+		log.Info().
+			Str("request_id", requestID).
+			Str("organization_id", reqBody.OrganizationID).
+			Msg("Starting async transcript analysis")
+
 		result, err := processor.ProcessTranscript(reqBody)
 		if err != nil {
-			logger.Error().
+			log.Error().
 				Err(err).
-				Msg("Failed to process transcript")
+				Str("request_id", requestID).
+				Str("organization_id", reqBody.OrganizationID).
+				Msg("Transcript analysis failed")
 
-			// Write error response
 			writeErrorResponse(w, http.StatusInternalServerError, "processing_failed", err.Error())
 			return
 		}
+
 		if result {
-			logger.Info().
-				Interface("result", result).
-				Msg("Successfully processed transcript")
+			log.Info().
+				Str("request_id", requestID).
+				Str("organization_id", reqBody.OrganizationID).
+				Bool("success", result).
+				Msg("Transcript analysis completed successfully")
 		} else {
-			logger.Warn().
-				Msg("Transcript processing completed with no result")
+			log.Warn().
+				Str("request_id", requestID).
+				Str("organization_id", reqBody.OrganizationID).
+				Msg("Transcript analysis completed with no actionable results")
 		}
 	}()
 
-	logger.Info().Msg("Request accepted, async processing initiated")
+	log.Info().
+		Str("request_id", requestID).
+		Str("organization_id", reqBody.OrganizationID).
+		Msg("Request accepted, async operations initiated")
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -148,16 +135,18 @@ func handleTranscript(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		logger.Error().
+		log.Error().
 			Err(err).
-			Msg("Failed to encode response")
+			Str("request_id", requestID).
+			Msg("Failed to serialize response JSON")
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 }
 
-// writeErrorResponse handles writing error responses with consistent logging
 func writeErrorResponse(w http.ResponseWriter, statusCode int, errorCode, message string) {
+	log := logger.Get()
+
 	response := GenerateServicesPromptResponse{
 		Status:  "error",
 		Message: "Failed to generate services prompt",
@@ -172,33 +161,39 @@ func writeErrorResponse(w http.ResponseWriter, statusCode int, errorCode, messag
 	w.WriteHeader(statusCode)
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		logger.Error().
+		log.Error().
 			Err(err).
-			Msg("Failed to write error response")
+			Str("error_code", errorCode).
+			Str("intended_message", message).
+			Int("status_code", statusCode).
+			Msg("Failed to encode error response")
 		return
 	}
 
-	logger.Error().
+	log.Error().
 		Str("error_code", errorCode).
 		Str("error_message", message).
 		Int("status_code", statusCode).
-		Msg("Request failed")
+		Msg("Request processing failed with error")
 }
 
 func main() {
-	initLogger()
+	// Initialize the logger
+	logger.Init()
+	log := logger.Get()
 
 	// Configure routes
 	http.HandleFunc("/transcript", handleTranscript)
-	// http.HandleFunc("/GenerateServicesPrompt", handleGenerateServicesPrompt)
 
-	logger.Info().
-		Str("port", "8080").
-		Msg("Server starting")
+	port := "8080"
+	log.Info().
+		Str("port", port).
+		Msg("Starting HTTP server")
 
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		logger.Fatal().
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
+		log.Fatal().
 			Err(err).
+			Str("port", port).
 			Msg("Server failed to start")
 	}
 }

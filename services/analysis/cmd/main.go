@@ -54,24 +54,6 @@ func initLogger() {
 		Logger()
 }
 
-func main() {
-	initLogger()
-
-	// Configure routes
-	http.HandleFunc("/transcript", handleTranscript)
-	// http.HandleFunc("/GenerateServicesPrompt", handleGenerateServicesPrompt)
-
-	logger.Info().
-		Str("port", "8080").
-		Msg("Server starting")
-
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		logger.Fatal().
-			Err(err).
-			Msg("Server failed to start")
-	}
-}
-
 type genServicesPrompt struct {
 	OrganizationID string `json:"organization_id"`
 	Transcript     string `json:"transcript"`
@@ -203,104 +185,20 @@ func writeErrorResponse(w http.ResponseWriter, statusCode int, errorCode, messag
 		Msg("Request failed")
 }
 
-// func handleGenerateServicesPrompt(w http.ResponseWriter, r *http.Request) {
-// 	logger.Info().
-// 		Str("method", r.Method).
-// 		Str("path", r.URL.Path).
-// 		Msg("Handling generate services prompt request")
+func main() {
+	initLogger()
 
-// 	// Parse request body
-// 	var req genServicesPrompt
-// 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-// 		logger.Error().
-// 			Err(err).
-// 			Msg("Failed to parse request body")
-// 		writeErrorResponse(w, http.StatusBadRequest, "invalid_request", "Failed to parse request body")
-// 		return
-// 	}
+	// Configure routes
+	http.HandleFunc("/transcript", handleTranscript)
+	// http.HandleFunc("/GenerateServicesPrompt", handleGenerateServicesPrompt)
 
-// 	// Log parsed request details
-// 	logger.Debug().
-// 		Str("organization_id", req.OrganizationID).
-// 		Int("transcript_length", len(req.Transcript)).
-// 		Msg("Parsed request body")
+	logger.Info().
+		Str("port", "8080").
+		Msg("Server starting")
 
-// 	// Validate required fields
-// 	if req.OrganizationID == "" {
-// 		logger.Error().
-// 			Msg("Missing organization ID in request")
-// 		writeErrorResponse(w, http.StatusBadRequest, "missing_organization_id", "Organization ID is required")
-// 		return
-// 	}
-
-// 	if req.Transcript == "" {
-// 		logger.Error().
-// 			Msg("Missing transcript in request")
-// 		writeErrorResponse(w, http.StatusBadRequest, "missing_transcript", "Transcript is required")
-// 		return
-// 	}
-
-// 	logger.Info().
-// 		Str("organization_id", req.OrganizationID).
-// 		Msg("Processing request for organization")
-
-// 	// Generate prompt
-// 	prompt, schema, err := structOutputs.GenerateServicesPrompt(req.OrganizationID, req.Transcript)
-// 	if err != nil {
-// 		var statusCode int
-// 		var errorCode string
-
-// 		// Determine error type and log appropriately
-// 		switch {
-// 		case strings.Contains(err.Error(), "organization_lookup_failed"):
-// 			statusCode = http.StatusNotFound
-// 			errorCode = "organization_not_found"
-// 			logger.Error().
-// 				Err(err).
-// 				Str("organization_id", req.OrganizationID).
-// 				Msg("Organization lookup failed")
-
-// 		case strings.Contains(err.Error(), "services_lookup_failed"):
-// 			statusCode = http.StatusInternalServerError
-// 			errorCode = "services_lookup_failed"
-// 			logger.Error().
-// 				Err(err).
-// 				Str("organization_id", req.OrganizationID).
-// 				Msg("Services lookup failed")
-
-// 		default:
-// 			statusCode = http.StatusInternalServerError
-// 			errorCode = "internal_error"
-// 			logger.Error().
-// 				Err(err).
-// 				Msg("Unexpected error during prompt generation")
-// 		}
-
-// 		writeErrorResponse(w, statusCode, errorCode, err.Error())
-// 		return
-// 	}
-
-// 	// Prepare successful response
-// 	response := GenerateServicesPromptResponse{
-// 		Status:                  "OK",
-// 		Message:                 "Services prompt generated successfully",
-// 		GeneratedServicesPrompt: prompt,
-// 		IsSchemaPresent:         schema != nil,
-// 	}
-
-// 	// Write success response
-// 	w.Header().Set("Content-Type", "application/json")
-// 	w.WriteHeader(http.StatusOK)
-
-// 	if err := json.NewEncoder(w).Encode(response); err != nil {
-// 		logger.Error().
-// 			Err(err).
-// 			Msg("Failed to write response")
-// 		return
-// 	}
-
-// 	logger.Info().
-// 		Bool("schema_present", schema != nil).
-// 		Int("prompt_length", len(prompt)).
-// 		Msg("Successfully processed request")
-// }
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		logger.Fatal().
+			Err(err).
+			Msg("Server failed to start")
+	}
+}

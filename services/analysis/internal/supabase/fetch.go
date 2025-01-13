@@ -13,7 +13,7 @@ type ServiceStatusEnum string
 
 // FetchOrganizationName retrieves an organization's name by its ID
 func FetchOrganizationName(organizationID string) (string, error) {
-	client, initErr := initSupabaseClient()
+	client, initErr := InitSupabaseClient()
 	if initErr != nil {
 		return "", fmt.Errorf("failed to initialize Supabase client: %w", initErr)
 	}
@@ -42,7 +42,7 @@ func FetchOrganizationName(organizationID string) (string, error) {
 
 // FetchOrganizationServices retrieves all services associated with an organization
 func FetchOrganizationServices(organizationID string) ([]hsds_types.Service, error) {
-	client, initErr := initSupabaseClient()
+	client, initErr := InitSupabaseClient()
 	if initErr != nil {
 		return nil, fmt.Errorf("failed to initialize Supabase client: %w", initErr)
 	}
@@ -98,7 +98,7 @@ func FetchOrganizationServices(organizationID string) ([]hsds_types.Service, err
 }
 
 func FetchUnits() ([]hsds_types.Unit, error) {
-	client, initErr := initSupabaseClient()
+	client, initErr := InitSupabaseClient()
 	if initErr != nil {
 		return nil, fmt.Errorf("failed to initialize Supabase client: %w", initErr)
 	}

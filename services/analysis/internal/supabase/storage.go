@@ -10,7 +10,7 @@ import (
 )
 
 func StoreCallData(params types.TranscriptsReqBody) error {
-	client, err := initSupabaseClient()
+	client, err := InitSupabaseClient()
 	if err != nil {
 		return fmt.Errorf("failed to initialize Supabase client: %w", err)
 	}
@@ -64,7 +64,7 @@ func StoreCallData(params types.TranscriptsReqBody) error {
 }
 
 func StoreNewServices(services []*hsds_types.Service) error {
-	client, err := initSupabaseClient()
+	client, err := InitSupabaseClient()
 	if err != nil {
 		return fmt.Errorf("failed to initialize Supabase client: %w", err)
 	}
@@ -96,7 +96,7 @@ func StoreNewServices(services []*hsds_types.Service) error {
 			"last_modified":           service.LastModified,
 		}
 
-		data, _, err := client.From("services").
+		data, _, err := client.From("service").
 			Insert(serviceData, false, "", "representation", "").
 			Execute()
 		if err != nil {
@@ -104,5 +104,71 @@ func StoreNewServices(services []*hsds_types.Service) error {
 		}
 	}
 
+	return nil
+}
+
+func StoreNewCapacity(capacityObjects []*hsds_types.ServiceCapacity) error {
+	client, err := InitSupabaseClient()
+	if err != nil {
+		return fmt.Errorf("failed to initialize Supabase client: %w", err)
+	}
+
+	for _, capObj := range capacityObjects {
+		capacityData := map[string]interface{}{
+			"id":         capObj.ID,
+			"service_id": capObj.ServiceID,
+			"unit_id":    capObj.UnitID,
+			"available":  capObj.Available,
+			"updated":    capObj.Updated,
+		}
+
+		// Add optional fields only if they're not nil
+		if capObj.Maximum != nil {
+			capacityData["maximum"] = *capObj.Maximum
+		}
+		if capObj.Description != nil {
+			capacityData["description"] = *capObj.Description
+		}
+
+		data, _, err := client.From("service_capacity").
+			Insert(capacityData, false, "", "representation", "").
+			Execute()
+		if err != nil {
+			return fmt.Errorf("failed to insert capacity data: %w, data: %s", err, string(data))
+		}
+	}
+	return nil
+}
+
+func StoreNewUnits(unitObjects []*hsds_types.Unit) error {
+	client, err := InitSupabaseClient()
+	if err != nil {
+		return fmt.Errorf("failed to initialize Supabase client: %w", err)
+	}
+
+	for _, unitObj := range unitObjects {
+		unitsData := map[string]interface{}{
+			"id":   unitObj.ID,
+			"name": unitObj.Name,
+		}
+
+		// Add optional fields only if they're not nil
+		if unitObj.Scheme != nil {
+			unitsData["scheme"] = *unitObj.Scheme
+		}
+		if unitObj.Identifier != nil {
+			unitsData["identifier"] = *unitObj.Identifier
+		}
+		if unitObj.URI != nil {
+			unitsData["uri"] = *unitObj.URI
+		}
+
+		data, _, err := client.From("unit").
+			Insert(unitsData, false, "", "representation", "").
+			Execute()
+		if err != nil {
+			return fmt.Errorf("failed to insert unit data: %w, data: %s", err, string(data))
+		}
+	}
 	return nil
 }

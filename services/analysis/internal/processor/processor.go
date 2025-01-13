@@ -2,85 +2,86 @@ package processor
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
-	"github.com/david-botos/BearHug/services/analysis/internal/processor/inference"
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/structOutputs"
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/validation"
-	"github.com/david-botos/BearHug/services/analysis/internal/supabase"
 	"github.com/david-botos/BearHug/services/analysis/internal/types"
-	"github.com/joho/godotenv"
+	"github.com/david-botos/BearHug/services/analysis/pkg/logger"
 )
 
 func ProcessTranscript(params types.TranscriptsReqBody) (bool, error) {
-	// Extract services based on the transcript
-	unformattedServices, servicesExtractionErr := structOutputs.ServicesExtraction(params)
+	log := logger.Get()
+
+	log.Info().
+		Str("organization_id", params.OrganizationID).
+		Int("transcript_length", len(params.Transcript)).
+		Msg("Starting transcript processing")
+
+	///* --- Extract services based on the transcript --- *///
+	log.Debug().Msg("Beginning service extraction from transcript")
+	extractedServices, servicesExtractionErr := structOutputs.ServicesExtraction(params)
 	if servicesExtractionErr != nil {
+		log.Error().
+			Err(servicesExtractionErr).
+			Str("organization_id", params.OrganizationID).
+			Msg("Service extraction failed")
 		return false, fmt.Errorf("error with service extraction: %w", servicesExtractionErr)
 	}
 
-	// Turn Services into DB format + Add Org ID FK
-	services, infConvErr := structOutputs.ConvertInferenceToServices(unformattedServices, params.OrganizationID)
-	if infConvErr != nil {
-		return false, fmt.Errorf("error converting inference results: %w", infConvErr)
+	///* --- Verify Service Uniqueness -> Upload or Update --- *///
+	log.Debug().Msg("Beginning to reason on extracted services compared to DB")
+	serviceCtx, serviceUpdateAndUploadErr := structOutputs.HandleExtractedServices(extractedServices, params.OrganizationID)
+	if serviceUpdateAndUploadErr != nil {
+		log.Error().
+			Err(serviceUpdateAndUploadErr).
+			Msg("Extracted service reasoning and upload failed")
+		return false, fmt.Errorf(`An error occurred when doing reasoning and upload on extracted services: %w`, serviceUpdateAndUploadErr)
 	}
 
-	fmt.Printf("Generated services successfully: ", services != nil)
-
-	// Generate prompt and schema to triage out what details are present
-	detailTriagePrompt, detailTriageSchema := structOutputs.GenerateTriagePrompt(params.Transcript)
-
-	// Declare Claude Inference Client
-	workingDir, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	envPath := filepath.Join(workingDir, ".env")
-	if err := godotenv.Load(envPath); err != nil {
-		panic(err)
-	}
-	fmt.Printf("envPath declared as: %s\n", envPath)
-	client := inference.NewClient(os.Getenv("ANTHROPIC_API_KEY"))
-	fmt.Printf("Initialized client with API key length: %d\n", len(os.Getenv("ANTHROPIC_API_KEY")))
-
-	// Run inference
-	serviceDetailsRes, serviceDetailsErr := client.RunClaudeInference(inference.PromptParams{Prompt: detailTriagePrompt, Schema: detailTriageSchema})
-	if serviceDetailsErr != nil {
-		return false, fmt.Errorf("error with details identification: %w", serviceDetailsErr)
+	///* --- Identify details for triaged analysis --- *///
+	log.Debug().Msg("Beginning to identify what details exist for further triaged analysis")
+	identifiedDetailTypes, detailIdentificationErr := structOutputs.IdentifyDetailsForTriagedAnalysis(params.Transcript)
+	if detailIdentificationErr != nil {
+		log.Error().
+			Err(detailIdentificationErr).
+			Msg("Failed to identify what details exist in the transcript")
+		return false, fmt.Errorf(`an error occurred when identifying details that are present in the transcript for further detailed analysis: %w`, detailIdentificationErr)
 	}
 
-	// Fetch existing services
-	existingServices, fetchErr := supabase.FetchOrganizationServices(params.OrganizationID)
-	if fetchErr != nil {
-		return false, fmt.Errorf("error fetching existing services: %w", fetchErr)
-	}
-
-	// Create service context with both existing and new services
-	serviceCtx := structOutputs.ServiceContext{
-		ExistingServices: existingServices,
-		NewServices:      services,
-	}
-
-	// Extract details about the identified detail categories
+	///* --- Conduct Triaged Analyses for Details --- *///
+	log.Debug().Msg("Starting detail extraction from triaged analysis")
 	extractedDetails, detailExtractionErr := structOutputs.HandleTriagedAnalysis(
 		params.Transcript,
-		serviceDetailsRes,
-		serviceCtx,
+		identifiedDetailTypes,
+		*serviceCtx,
 	)
 	if detailExtractionErr != nil {
-		return false, fmt.Errorf("error fetching existing services: %w", detailExtractionErr)
+		log.Error().
+			Err(detailExtractionErr).
+			Msg("Failed to extract details from triaged analysis")
+		return false, fmt.Errorf("error extracting details: %w", detailExtractionErr)
 	}
 
-	// Validate the details extracted for duplicates and hallucinations
-	validationResult, validatorErr := validation.ValidateExtractedInfo(extractedDetails, serviceCtx, params.Transcript)
+	///* --- Validate the Entire Output --- *///
+	log.Debug().
+		Interface("extracted_details", extractedDetails).
+		Msg("Starting validation of extracted information")
+	validationResult, validatorErr := validation.ValidateExtractedInfo(extractedDetails, *serviceCtx, params.Transcript)
 	if validatorErr != nil {
-		return false, fmt.Errorf(`Error when attempting to validate the information extracted from transcript: %w`, validatorErr)
+		log.Error().
+			Err(validatorErr).
+			Msg("Validation failed for extracted information")
+		return false, fmt.Errorf("error when attempting to validate the information extracted from transcript: %w", validatorErr)
 	}
 
-	if validationResult {
-		return true, nil
-	} else {
-		return false, fmt.Errorf(`Ah shit.... Unhandled error... good luck homie`)
+	if !validationResult {
+		log.Error().Msg("Validation failed with unhandled error")
+		return false, fmt.Errorf("validation failed with unhandled error")
 	}
+
+	log.Info().
+		Str("organization_id", params.OrganizationID).
+		Msg("Successfully completed transcript processing")
+
+	return true, nil
 }

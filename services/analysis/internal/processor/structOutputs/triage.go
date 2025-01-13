@@ -1,10 +1,12 @@
 package structOutputs
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/inference"
+	"github.com/rs/zerolog/log"
 )
 
 // TableName represents valid table names in the system
@@ -127,4 +129,94 @@ func GenerateTriagePrompt(transcript string) (string, inference.ToolInputSchema)
 		strings.Join(categoryDescriptionStrings, "\n"),
 		transcript)
 	return prompt, TriageDetailsTool
+}
+
+var TriageDetailsTool = inference.ToolInputSchema{
+	Type: "object",
+	Properties: map[string]inference.Property{
+		"detected_categories": {
+			Type:        "array",
+			Description: "Array of detail categories detected in the transcript",
+			Items: map[string]interface{}{
+				"type": "string",
+				"enum": []string{
+					string(CapacityCategory),
+					// string(SchedulingCategory),
+					// string(ProgramCategory),
+					// string(ReqDocsCategory),
+					// string(ContactCategory),
+				},
+				"description": "Valid detail category name",
+			},
+		},
+		"reasoning": {
+			Type:        "array",
+			Description: "Array of explanations where each index maps directly to the category at the same index in detected_categories",
+			Items: map[string]interface{}{
+				"type":        "string",
+				"description": "Explanation for why the corresponding category was selected, including specific evidence from the transcript",
+			},
+		},
+	},
+	Required: []string{"detected_categories", "reasoning"},
+}
+
+type IdentifiedDetails struct {
+	Input DetailsInput `json:"input"`
+}
+
+type DetailsInput struct {
+	DetectedCategories []string `json:"detected_categories"`
+	Reasoning          []string `json:"reasoning"`
+}
+
+func IdentifyDetailsForTriagedAnalysis(transcript string) (*IdentifiedDetails, error) {
+	log.Debug().Msg("Generating triage prompt and schema")
+	detailTriagePrompt, detailTriageSchema := GenerateTriagePrompt(transcript)
+
+	// Initialize Claude Inference Client
+	client, err := inference.InitInferenceClient()
+	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("Failed to initialize inference client")
+		return nil, fmt.Errorf("failed to initialize inference client: %w", err)
+	}
+
+	// Run inference
+	log.Debug().
+		Int("prompt_length", len(detailTriagePrompt)).
+		Bool("schema_present", len(detailTriageSchema.Properties) > 0).
+		Msg("Running Claude inference for detail identification")
+
+	serviceDetailsRes, serviceDetailsErr := client.RunClaudeInference(inference.PromptParams{
+		Prompt: detailTriagePrompt,
+		Schema: detailTriageSchema,
+	})
+	if serviceDetailsErr != nil {
+		log.Error().
+			Err(serviceDetailsErr).
+			Msg("Claude inference failed during detail identification")
+		return nil, fmt.Errorf("error with details identification: %w", serviceDetailsErr)
+	}
+
+	// Convert the map to JSON bytes first
+	jsonBytes, err := json.Marshal(serviceDetailsRes)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("Failed to marshal response map to JSON")
+		return nil, fmt.Errorf("failed to marshal response map: %w", err)
+	}
+
+	// Unmarshal JSON bytes into our struct
+	var details IdentifiedDetails
+	if err := json.Unmarshal(jsonBytes, &details); err != nil {
+		log.Error().
+			Err(err).
+			Msg("Failed to unmarshal Claude inference response")
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	return &details, nil
 }

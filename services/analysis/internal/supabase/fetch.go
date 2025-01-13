@@ -42,6 +42,8 @@ func FetchOrganizationName(organizationID string) (string, error) {
 
 // FetchOrganizationServices retrieves all services associated with an organization
 func FetchOrganizationServices(organizationID string) ([]hsds_types.Service, error) {
+	fmt.Printf(`Fetching organization services for org ID: %s`, organizationID)
+
 	client, initErr := InitSupabaseClient()
 	if initErr != nil {
 		return nil, fmt.Errorf("failed to initialize Supabase client: %w", initErr)

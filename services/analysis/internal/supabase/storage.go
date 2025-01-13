@@ -10,6 +10,10 @@ import (
 )
 
 func StoreCallData(params types.TranscriptsReqBody) error {
+
+	log.Printf("Storing transcript data - Organization ID: %s, Room URL: %s, Transcript: %s",
+		params.OrganizationID, params.RoomURL, params.Transcript)
+
 	client, err := InitSupabaseClient()
 	if err != nil {
 		return fmt.Errorf("failed to initialize Supabase client: %w", err)

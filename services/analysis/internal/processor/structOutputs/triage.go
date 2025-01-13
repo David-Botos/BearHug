@@ -11,14 +11,14 @@ import (
 type TableName string
 
 const (
-	ServicesTable         TableName = "services"
-	ServiceCapacityTable  TableName = "service_capacity"
-	UnitTable             TableName = "unit"
-	ScheduleTable         TableName = "schedule"
-	ProgramTable          TableName = "program"
-	RequiredDocumentTable TableName = "required_document"
-	ContactTable          TableName = "contact"
-	PhoneTable            TableName = "phone"
+	ServicesTable        TableName = "services"
+	ServiceCapacityTable TableName = "service_capacity"
+	UnitTable            TableName = "unit"
+	// ScheduleTable         TableName = "schedule"
+	// ProgramTable          TableName = "program"
+	// RequiredDocumentTable TableName = "required_document"
+	// ContactTable          TableName = "contact"
+	// PhoneTable            TableName = "phone"
 )
 
 // TableDescription contains information about what data belongs in each table
@@ -37,26 +37,26 @@ var tableDescriptions = []TableDescription{
 		Name:        UnitTable,
 		Description: "Defines custom units that give context to numerical values in service_capacity (e.g., beds, monetary awards)",
 	},
-	{
-		Name:        ScheduleTable,
-		Description: "Defines service timing including start/end times, duration, and frequency (daily/weekly/monthly)",
-	},
-	{
-		Name:        ProgramTable,
-		Description: "Groups related services under a common program (e.g., employment assistance program containing multiple related services)",
-	},
-	{
-		Name:        RequiredDocumentTable,
-		Description: "Lists required documentation for services (e.g., government ID)",
-	},
-	{
-		Name:        ContactTable,
-		Description: "Stores contact information for organization representatives",
-	},
-	{
-		Name:        PhoneTable,
-		Description: "Stores phone numbers for follow-up or additional information",
-	},
+	// {
+	// 	Name:        ScheduleTable,
+	// 	Description: "Defines service timing including start/end times, duration, and frequency (daily/weekly/monthly)",
+	// },
+	// {
+	// 	Name:        ProgramTable,
+	// 	Description: "Groups related services under a common program (e.g., employment assistance program containing multiple related services)",
+	// },
+	// {
+	// 	Name:        RequiredDocumentTable,
+	// 	Description: "Lists required documentation for services (e.g., government ID)",
+	// },
+	// {
+	// 	Name:        ContactTable,
+	// 	Description: "Stores contact information for organization representatives",
+	// },
+	// {
+	// 	Name:        PhoneTable,
+	// 	Description: "Stores phone numbers for follow-up or additional information",
+	// },
 }
 
 // Define descriptions for each category
@@ -66,26 +66,26 @@ var categoryDescriptions = []CategoryDescription{
 		Tables:      []TableName{ServiceCapacityTable, UnitTable},
 		Description: "Information about service capacity limits (e.g., number of beds) and their associated units of measurement",
 	},
-	{
-		Category:    SchedulingCategory,
-		Tables:      []TableName{ScheduleTable},
-		Description: "Service timing information including hours of operation, frequency, and duration",
-	},
-	{
-		Category:    ProgramCategory,
-		Tables:      []TableName{ProgramTable},
-		Description: "Organizational groupings of related services under a common program",
-	},
-	{
-		Category:    ReqDocsCategory,
-		Tables:      []TableName{RequiredDocumentTable},
-		Description: "Documentation requirements for service participation",
-	},
-	{
-		Category:    ContactCategory,
-		Tables:      []TableName{ContactTable, PhoneTable},
-		Description: "Contact information for service representatives including phone numbers",
-	},
+	// {
+	// 	Category:    SchedulingCategory,
+	// 	Tables:      []TableName{ScheduleTable},
+	// 	Description: "Service timing information including hours of operation, frequency, and duration",
+	// },
+	// {
+	// 	Category:    ProgramCategory,
+	// 	Tables:      []TableName{ProgramTable},
+	// 	Description: "Organizational groupings of related services under a common program",
+	// },
+	// {
+	// 	Category:    ReqDocsCategory,
+	// 	Tables:      []TableName{RequiredDocumentTable},
+	// 	Description: "Documentation requirements for service participation",
+	// },
+	// {
+	// 	Category:    ContactCategory,
+	// 	Tables:      []TableName{ContactTable, PhoneTable},
+	// 	Description: "Contact information for service representatives including phone numbers",
+	// },
 }
 
 // GenerateTriagePrompt should output what tables are worth looking into filling based on the transcript

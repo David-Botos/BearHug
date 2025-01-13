@@ -10,6 +10,7 @@ import (
 	"github.com/agnivade/levenshtein"
 	"github.com/david-botos/BearHug/services/analysis/internal/hsds_types"
 	"github.com/david-botos/BearHug/services/analysis/internal/supabase"
+	"github.com/david-botos/BearHug/services/analysis/pkg/logger"
 )
 
 type ServiceVerificationResult struct {
@@ -27,11 +28,25 @@ type ServiceVerificationResults struct {
 }
 
 func VerifyServiceUniqueness(services ServicesExtracted, organizationID string) (*ServiceVerificationResults, error) {
+	log := logger.Get()
+	log.Info().
+		Str("organization_id", organizationID).
+		Int("services_count", len(services.Input.NewServices)).
+		Msg("Starting service verification")
+
 	// Fetch existing services from Supabase
 	existingServices, err := supabase.FetchOrganizationServices(organizationID)
 	if err != nil {
+		log.Error().
+			Err(err).
+			Str("organization_id", organizationID).
+			Msg("Failed to fetch existing services")
 		return nil, fmt.Errorf("failed to fetch existing services: %w", err)
 	}
+
+	log.Debug().
+		Int("existing_services_count", len(existingServices)).
+		Msg("Retrieved existing services")
 
 	results := &ServiceVerificationResults{
 		NewServices:    make([]ExtractedService, 0),
@@ -105,6 +120,10 @@ func VerifyServiceUniqueness(services ServicesExtracted, organizationID string) 
 	for _, extractedService := range services.Input.NewServices {
 		found := false
 
+		log.Debug().
+			Str("service_name", extractedService.Name).
+			Msg("Checking service for uniqueness")
+
 		for _, existingService := range existingServices {
 			// Check if service names are similar
 			if isSimilarString(existingService.Name, extractedService.Name) {
@@ -114,6 +133,13 @@ func VerifyServiceUniqueness(services ServicesExtracted, organizationID string) 
 				changes := detectChanges(&existingService, &extractedService)
 
 				if len(changes) > 0 {
+					log.Info().
+						Str("service_id", existingService.ID).
+						Str("service_name", existingService.Name).
+						Int("changes_count", len(changes)).
+						Interface("changes", changes).
+						Msg("Service needs updates")
+
 					results.UpdateServices = append(results.UpdateServices, ServiceVerificationResult{
 						ExistingService:  &existingService,
 						ExtractedService: extractedService,
@@ -121,23 +147,43 @@ func VerifyServiceUniqueness(services ServicesExtracted, organizationID string) 
 						HasChanges:       true,
 						Changes:          changes,
 					})
+				} else {
+					log.Debug().
+						Str("service_id", existingService.ID).
+						Str("service_name", existingService.Name).
+						Msg("Service matched but no changes needed")
 				}
 				break
 			}
 		}
 
 		if !found {
-			// This is a new service
+			log.Info().
+				Str("service_name", extractedService.Name).
+				Msg("New service identified")
 			results.NewServices = append(results.NewServices, extractedService)
 		}
 	}
+
+	log.Info().
+		Int("new_services", len(results.NewServices)).
+		Int("updated_services", len(results.UpdateServices)).
+		Msg("Service verification completed")
 
 	return results, nil
 }
 
 func UpdateExistingServices(services []ServiceVerificationResult) error {
+	log := logger.Get()
+	log.Info().
+		Int("services_count", len(services)).
+		Msg("Starting service updates")
+
 	client, err := supabase.InitSupabaseClient()
 	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("Failed to initialize Supabase client")
 		return fmt.Errorf("failed to initialize Supabase client: %w", err)
 	}
 
@@ -145,6 +191,12 @@ func UpdateExistingServices(services []ServiceVerificationResult) error {
 		if !service.HasChanges {
 			continue
 		}
+
+		log.Debug().
+			Str("service_id", service.ExistingService.ID).
+			Str("service_name", service.ExistingService.Name).
+			Interface("changes", service.Changes).
+			Msg("Updating service")
 
 		// Prepare update data using the Changes map
 		updateData := make(map[string]interface{})
@@ -164,10 +216,22 @@ func UpdateExistingServices(services []ServiceVerificationResult) error {
 			Execute()
 
 		if err != nil {
+			log.Error().
+				Err(err).
+				Str("service_id", service.ExistingService.ID).
+				Str("service_name", service.ExistingService.Name).
+				Str("response_data", string(data)).
+				Msg("Failed to update service")
 			return fmt.Errorf("failed to update service %s: %w, data: %s",
 				service.ExistingService.ID, err, string(data))
 		}
+
+		log.Info().
+			Str("service_id", service.ExistingService.ID).
+			Str("service_name", service.ExistingService.Name).
+			Msg("Successfully updated service")
 	}
 
+	log.Info().Msg("All service updates completed successfully")
 	return nil
 }

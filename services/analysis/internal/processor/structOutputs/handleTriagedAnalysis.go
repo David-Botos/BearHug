@@ -3,6 +3,8 @@ package structOutputs
 import (
 	"fmt"
 	"sync"
+
+	"github.com/david-botos/BearHug/services/analysis/pkg/logger"
 )
 
 // HandleTriagedAnalysis takes the triage results and launches appropriate analysis routines
@@ -11,11 +13,21 @@ func HandleTriagedAnalysis(
 	serviceDetailsRes *IdentifiedDetails,
 	serviceCtx ServiceContext,
 ) ([]*DetailAnalysisResult, error) {
+	log := logger.Get()
+
+	log.Debug().
+		Str("transcript_length", fmt.Sprint(len(transcript))).
+		Msg("Starting triage analysis")
+
 	if serviceDetailsRes == nil || len(serviceDetailsRes.Input.DetectedCategories) == 0 {
+		log.Error().Msg("No categories detected in response")
 		return nil, fmt.Errorf("no categories detected in response")
 	}
 
 	detectedCategories := serviceDetailsRes.Input.DetectedCategories
+	log.Info().
+		Interface("categories", detectedCategories).
+		Msg("Processing detected categories")
 
 	var wg sync.WaitGroup
 	results := make([]*DetailAnalysisResult, len(detectedCategories))
@@ -26,6 +38,14 @@ func HandleTriagedAnalysis(
 		wg.Add(1)
 		go func(index int, cat string) {
 			defer wg.Done()
+
+			log := log.With().
+				Int("category_index", index).
+				Str("category", cat).
+				Logger()
+
+			log.Debug().Msg("Starting category analysis")
+
 			var result DetailAnalysisResult
 			var err error
 
@@ -45,9 +65,13 @@ func HandleTriagedAnalysis(
 			}
 
 			if err != nil {
-				errChan <- fmt.Errorf("error analyzing category %s: %w", cat, err)
+				wrappedErr := fmt.Errorf("error analyzing category %s: %w", cat, err)
+				log.Error().Err(wrappedErr).Msg("Category analysis failed")
+				errChan <- wrappedErr
 				return
 			}
+
+			log.Debug().Msg("Category analysis completed successfully")
 			results[index] = &result
 		}(i, categoryStr)
 	}
@@ -67,6 +91,9 @@ func HandleTriagedAnalysis(
 		for i, err := range errs {
 			errMsgs[i] = err.Error()
 		}
+		log.Error().
+			Interface("errors", errMsgs).
+			Msg("Multiple errors occurred during analysis")
 		return nil, fmt.Errorf("multiple errors occurred: %v", errMsgs)
 	}
 
@@ -77,6 +104,10 @@ func HandleTriagedAnalysis(
 			finalResults = append(finalResults, result)
 		}
 	}
+
+	log.Info().
+		Int("total_results", len(finalResults)).
+		Msg("Triage analysis completed successfully")
 
 	return finalResults, nil
 }

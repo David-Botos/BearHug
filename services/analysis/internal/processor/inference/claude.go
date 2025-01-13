@@ -83,6 +83,7 @@ type Usage struct {
 // initInferenceClient initializes the Claude inference client
 func InitInferenceClient() (*ClaudeClient, error) {
 	log := logger.Get()
+	log.Debug().Msg("Initializing Claude inference client")
 
 	workingDir, err := os.Getwd()
 	if err != nil {
@@ -117,6 +118,12 @@ func InitInferenceClient() (*ClaudeClient, error) {
 
 // RunClaudeInference performs inference with structured output validation
 func (c *ClaudeClient) RunClaudeInference(params PromptParams) (map[string]interface{}, error) {
+	log := logger.Get()
+	log.Debug().
+		Str("model", "claude-3-5-sonnet-20241022").
+		Int("max_tokens", 1500).
+		Msg("Starting Claude inference request")
+
 	// Create request body
 	reqBody := TriagePromptRequest{
 		Model:     "claude-3-5-sonnet-20241022",
@@ -139,20 +146,18 @@ func (c *ClaudeClient) RunClaudeInference(params PromptParams) (map[string]inter
 	// Marshal the request body
 	jsonData, err := json.Marshal(reqBody)
 	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("Failed to marshal request body")
 		return nil, fmt.Errorf("error marshaling request: %w", err)
 	}
-
-	// LOG
-	prettyJSON, err := json.MarshalIndent(reqBody, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling request: %w", err)
-	}
-	fmt.Printf("Request body being sent to Claude:\n%s\n", string(prettyJSON))
-	// END LOG
 
 	// Create request
 	req, err := http.NewRequest("POST", "https://api.anthropic.com/v1/messages", bytes.NewBuffer(jsonData))
 	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("Failed to create HTTP request")
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
 
@@ -161,72 +166,91 @@ func (c *ClaudeClient) RunClaudeInference(params PromptParams) (map[string]inter
 	req.Header.Set("x-api-key", c.apiKey)
 	req.Header.Set("anthropic-version", "2023-06-01")
 
+	log.Debug().
+		Str("method", req.Method).
+		Str("url", req.URL.String()).
+		Msg("Sending request to Claude API")
+
 	// Make request
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("Failed to execute HTTP request")
 		return nil, fmt.Errorf("error making request: %w", err)
 	}
 	defer resp.Body.Close()
 
+	log.Debug().
+		Int("status_code", resp.StatusCode).
+		Msg("Received response from Claude API")
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("Failed to read response body")
 		return nil, fmt.Errorf("error reading response: %w", err)
 	}
-
-	// LOG raw body first
-	fmt.Printf("Raw body before processing:\n%s\n", string(body))
 
 	// Parse response
 	var inferenceResp InferenceResponse
 	if err := json.Unmarshal(body, &inferenceResp); err != nil {
+		log.Error().
+			Err(err).
+			Str("body", string(body)).
+			Msg("Failed to parse response body")
 		return nil, fmt.Errorf("error parsing response: %w", err)
 	}
 
-	// LOG the parsed response
-	fmt.Printf("Parsed response Content length: %d\n", len(inferenceResp.Content))
-	for i, content := range inferenceResp.Content {
-		fmt.Printf("Content[%d] Type: %s\n", i, content.Type)
-		if content.Type == "tool_use" {
-			fmt.Printf("Found tool_use content at index %d\n", i)
-			fmt.Printf("Input: %+v\n", content.Input)
-		}
-	}
+	log.Debug().
+		Int("content_length", len(inferenceResp.Content)).
+		Str("model", inferenceResp.Model).
+		Str("stop_reason", inferenceResp.StopReason).
+		Interface("usage", inferenceResp.Usage).
+		Msg("Successfully parsed inference response")
 
 	var toolOutput interface{}
-	for _, content := range inferenceResp.Content {
+	for i, content := range inferenceResp.Content {
+		log.Debug().
+			Int("index", i).
+			Str("content_type", content.Type).
+			Msg("Processing response content")
+
 		if content.Type == "tool_use" {
 			toolOutput = content.Input
-			fmt.Printf("Setting toolOutput: %+v\n", content.Input)
+			log.Debug().
+				Interface("tool_output", content.Input).
+				Msg("Found tool output in response")
 			break
 		}
 	}
 
 	if toolOutput == nil {
-		fmt.Printf("toolOutput is nil after processing\n")
+		log.Error().Msg("No structured output found in response")
 		return nil, fmt.Errorf("no structured output found in response")
 	}
 
-	// LOG
-	var prettyToolOutput bytes.Buffer
-	jsonBytes, err := json.Marshal(toolOutput)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling tool output: %v", err)
-	}
-	if err := json.Indent(&prettyToolOutput, jsonBytes, "", "  "); err != nil {
-		return nil, fmt.Errorf("error formatting JSON: %v", err)
-	}
-	fmt.Printf("Formatted tool output:\n%s\n", prettyToolOutput.String())
-	// END LOG
-
 	// Validate the tool output against the schema
 	if err := validateAgainstSchema(toolOutput, params.Schema); err != nil {
+		log.Error().
+			Err(err).
+			Interface("tool_output", toolOutput).
+			Msg("Response validation failed")
 		return nil, fmt.Errorf("response validation failed: %w", err)
 	}
 
 	contentMap, ok := toolOutput.(map[string]interface{})
 	if !ok {
+		log.Error().
+			Interface("tool_output", toolOutput).
+			Msg("Unexpected response format")
 		return nil, fmt.Errorf("unexpected response format")
 	}
+
+	log.Info().
+		Int("fields_count", len(contentMap)).
+		Msg("Successfully processed Claude inference request")
 
 	return contentMap, nil
 }

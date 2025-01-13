@@ -8,29 +8,24 @@ import (
 // HandleTriagedAnalysis takes the triage results and launches appropriate analysis routines
 func HandleTriagedAnalysis(
 	transcript string,
-	serviceDetailsRes map[string]interface{},
+	serviceDetailsRes *IdentifiedDetails,
 	serviceCtx ServiceContext,
 ) ([]*DetailAnalysisResult, error) {
-	detectedCategories, ok := serviceDetailsRes["detected_categories"].([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid detected_categories format in response")
+	if serviceDetailsRes == nil || len(serviceDetailsRes.Input.DetectedCategories) == 0 {
+		return nil, fmt.Errorf("no categories detected in response")
 	}
+
+	detectedCategories := serviceDetailsRes.Input.DetectedCategories
 
 	var wg sync.WaitGroup
 	results := make([]*DetailAnalysisResult, len(detectedCategories))
 	errChan := make(chan error, len(detectedCategories))
 
 	// Launch a goroutine for each detected category
-	for i, category := range detectedCategories {
-		categoryStr, ok := category.(string)
-		if !ok {
-			continue
-		}
-
+	for i, categoryStr := range detectedCategories {
 		wg.Add(1)
 		go func(index int, cat string) {
 			defer wg.Done()
-
 			var result DetailAnalysisResult
 			var err error
 
@@ -38,13 +33,13 @@ func HandleTriagedAnalysis(
 			case CapacityCategory:
 				result, err = analyzeCapacityDetails(transcript, serviceCtx)
 			// case SchedulingCategory:
-			// 	result, err = analyzeSchedulingDetails(transcript, serviceCtx)
+			//     result, err = analyzeSchedulingDetails(transcript, serviceCtx)
 			// case ProgramCategory:
-			// 	result, err = analyzeProgramDetails(transcript, serviceCtx)
+			//     result, err = analyzeProgramDetails(transcript, serviceCtx)
 			// case ReqDocsCategory:
-			// 	result, err = analyzeReqDocsDetails(transcript, serviceCtx)
+			//     result, err = analyzeReqDocsDetails(transcript, serviceCtx)
 			// case ContactCategory:
-			// 	result, err = analyzeContactDetails(transcript, serviceCtx)
+			//     result, err = analyzeContactDetails(transcript, serviceCtx)
 			default:
 				err = fmt.Errorf("unknown category: %s", cat)
 			}
@@ -53,7 +48,6 @@ func HandleTriagedAnalysis(
 				errChan <- fmt.Errorf("error analyzing category %s: %w", cat, err)
 				return
 			}
-
 			results[index] = &result
 		}(i, categoryStr)
 	}
@@ -67,7 +61,6 @@ func HandleTriagedAnalysis(
 	for err := range errChan {
 		errs = append(errs, err)
 	}
-
 	if len(errs) > 0 {
 		// Combine all errors into a single error message
 		errMsgs := make([]string, len(errs))

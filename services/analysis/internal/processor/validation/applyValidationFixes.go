@@ -22,7 +22,7 @@ func applyFixes(
 	copy(newDetails, details)
 
 	newServiceCtx := structOutputs.ServiceContext{
-		ExistingServices: make([]hsds_types.Service, len(serviceCtx.ExistingServices)),
+		ExistingServices: make([]*hsds_types.Service, len(serviceCtx.ExistingServices)),
 		NewServices:      make([]*hsds_types.Service, len(serviceCtx.NewServices)),
 	}
 	copy(newServiceCtx.ExistingServices, serviceCtx.ExistingServices)

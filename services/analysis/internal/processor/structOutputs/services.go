@@ -198,12 +198,8 @@ type ExtractedService struct {
 	MaximumAge             *float64 `json:"maximum_age,omitempty"`
 	Alert                  *string  `json:"alert,omitempty"`
 }
-
-type ServicesInput struct {
-	NewServices []ExtractedService `json:"new_services"`
-}
 type ServicesExtracted struct {
-	Input ServicesInput `json:"input"`
+	NewServices []ExtractedService `json:"new_services"`
 }
 
 func ServicesExtraction(params types.TranscriptsReqBody) (ServicesExtracted, error) {
@@ -256,7 +252,7 @@ func ServicesExtraction(params types.TranscriptsReqBody) (ServicesExtracted, err
 	}
 
 	log.Info().
-		Int("extracted_services_count", len(servicesExtracted.Input.NewServices)).
+		Int("extracted_services_count", len(servicesExtracted.NewServices)).
 		Msg("Successfully completed services extraction")
 
 	return servicesExtracted, nil
@@ -266,7 +262,7 @@ func HandleExtractedServices(services ServicesExtracted, organizationID string) 
 	log := logger.Get()
 	log.Info().
 		Str("organization_id", organizationID).
-		Int("services_count", len(services.Input.NewServices)).
+		Int("services_count", len(services.NewServices)).
 		Msg("Starting to handle extracted services")
 
 	if !hsds_types.ValidateUUID(organizationID) {

@@ -31,7 +31,7 @@ func VerifyServiceUniqueness(services ServicesExtracted, organizationID string) 
 	log := logger.Get()
 	log.Info().
 		Str("organization_id", organizationID).
-		Int("services_count", len(services.Input.NewServices)).
+		Int("services_count", len(services.NewServices)).
 		Msg("Starting service verification")
 
 	// Fetch existing services from Supabase
@@ -117,7 +117,7 @@ func VerifyServiceUniqueness(services ServicesExtracted, organizationID string) 
 	}
 
 	// Check each extracted service against existing services
-	for _, extractedService := range services.Input.NewServices {
+	for _, extractedService := range services.NewServices {
 		found := false
 
 		log.Debug().

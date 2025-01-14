@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -13,6 +14,37 @@ var (
 	logger zerolog.Logger
 	once   sync.Once
 )
+
+// prettyPrint attempts to format an interface as indented JSON
+func prettyPrint(i interface{}) string {
+	switch v := i.(type) {
+	case []byte:
+		// Try to unmarshal and pretty print JSON bytes
+		var jsonData interface{}
+		if err := json.Unmarshal(v, &jsonData); err == nil {
+			if pretty, err := json.MarshalIndent(jsonData, "", "  "); err == nil {
+				return "\n" + string(pretty)
+			}
+		}
+		// If not valid JSON, return as string
+		return string(v)
+	case string:
+		// Try to unmarshal and pretty print JSON string
+		var jsonData interface{}
+		if err := json.Unmarshal([]byte(v), &jsonData); err == nil {
+			if pretty, err := json.MarshalIndent(jsonData, "", "  "); err == nil {
+				return "\n" + string(pretty)
+			}
+		}
+		return v
+	default:
+		// For other types, try to marshal as JSON
+		if pretty, err := json.MarshalIndent(v, "", "  "); err == nil {
+			return "\n" + string(pretty)
+		}
+		return strings.ToUpper(fmt.Sprint(i))
+	}
+}
 
 // Init initializes the global logger with custom formatting
 func Init() {
@@ -42,9 +74,7 @@ func Init() {
 			FormatFieldName: func(i interface{}) string {
 				return fmt.Sprintf("%s:", i)
 			},
-			FormatFieldValue: func(i interface{}) string {
-				return strings.ToUpper(fmt.Sprint(i))
-			},
+			FormatFieldValue: prettyPrint,
 		}
 
 		logger = zerolog.New(output).

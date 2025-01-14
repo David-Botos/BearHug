@@ -10,7 +10,7 @@ import (
 // HandleTriagedAnalysis takes the triage results and launches appropriate analysis routines
 func HandleTriagedAnalysis(
 	transcript string,
-	serviceDetailsRes *IdentifiedDetails,
+	identifiedDetails *IdentifiedDetails,
 	serviceCtx ServiceContext,
 ) ([]*DetailAnalysisResult, error) {
 	log := logger.Get()
@@ -19,12 +19,12 @@ func HandleTriagedAnalysis(
 		Str("transcript_length", fmt.Sprint(len(transcript))).
 		Msg("Starting triage analysis")
 
-	if serviceDetailsRes == nil || len(serviceDetailsRes.Input.DetectedCategories) == 0 {
+	if identifiedDetails == nil || len(identifiedDetails.DetectedCategories) == 0 {
 		log.Error().Msg("No categories detected in response")
 		return nil, fmt.Errorf("no categories detected in response")
 	}
 
-	detectedCategories := serviceDetailsRes.Input.DetectedCategories
+	detectedCategories := identifiedDetails.DetectedCategories
 	log.Info().
 		Interface("categories", detectedCategories).
 		Msg("Processing detected categories")

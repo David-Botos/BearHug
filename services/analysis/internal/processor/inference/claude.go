@@ -220,7 +220,7 @@ func (c *ClaudeClient) RunClaudeInference(params PromptParams) (map[string]inter
 		if content.Type == "tool_use" {
 			toolOutput = content.Input
 			log.Debug().
-				Interface("tool_output", content.Input).
+				Interface("tool_output", toolOutput).
 				Msg("Found tool output in response")
 			break
 		}

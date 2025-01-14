@@ -162,10 +162,6 @@ var TriageDetailsTool = inference.ToolInputSchema{
 }
 
 type IdentifiedDetails struct {
-	Input DetailsInput `json:"input"`
-}
-
-type DetailsInput struct {
 	DetectedCategories []string `json:"detected_categories"`
 	Reasoning          []string `json:"reasoning"`
 }

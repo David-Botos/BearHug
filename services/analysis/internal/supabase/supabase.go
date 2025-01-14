@@ -1,4 +1,4 @@
-package storage
+package supabase
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/supabase-community/supabase-go"
 )
 
-func initSupabaseClient() (*supabase.Client, error) {
+func InitSupabaseClient() (*supabase.Client, error) {
 	workingDir, err := os.Getwd()
 	if err != nil {
 		panic(err)

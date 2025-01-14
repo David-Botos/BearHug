@@ -1,130 +1,204 @@
 package main
 
 import (
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
-	"time"
+	"strings"
 
 	"github.com/david-botos/BearHug/services/analysis/internal/processor"
-	"github.com/david-botos/BearHug/services/analysis/internal/storage"
+	"github.com/david-botos/BearHug/services/analysis/internal/supabase"
 	"github.com/david-botos/BearHug/services/analysis/internal/types"
+	"github.com/rs/zerolog"
 )
 
-func main() {
-	http.HandleFunc("/transcript", handleTranscript)
-	log.Printf("INFO: Server starting on port :8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatalf("FATAL: Server failed to start: %v", err)
+// Create a package-level logger variable
+var logger zerolog.Logger
+
+// initLogger initializes the global logger
+func initLogger() {
+	output := zerolog.ConsoleWriter{
+		Out:        os.Stdout,
+		TimeFormat: "15:04:05",
+		FormatLevel: func(i interface{}) string {
+			switch i.(string) {
+			case "info":
+				return "🟢 INFO"
+			case "debug":
+				return "🔍 DEBUG"
+			case "warn":
+				return "⚠️  WARN"
+			case "error":
+				return "❌ ERROR"
+			case "fatal":
+				return "💀 FATAL"
+			default:
+				return "   " + strings.ToUpper(fmt.Sprint(i))
+			}
+		},
+		FormatMessage: func(i interface{}) string {
+			return fmt.Sprintf("| %s |", i)
+		},
+		FormatFieldName: func(i interface{}) string {
+			return fmt.Sprintf("%s:", i)
+		},
+		FormatFieldValue: func(i interface{}) string {
+			return strings.ToUpper(fmt.Sprint(i))
+		},
 	}
+
+	logger = zerolog.New(output).
+		With().
+		Timestamp().
+		Logger()
+}
+
+type genServicesPrompt struct {
+	OrganizationID string `json:"organization_id"`
+	Transcript     string `json:"transcript"`
+}
+
+type GenerateServicesPromptResponse struct {
+	Status                  string       `json:"status"`
+	Message                 string       `json:"message"`
+	GeneratedServicesPrompt string       `json:"generated_services_prompt"`
+	IsSchemaPresent         bool         `json:"is_schema_present"`
+	Error                   *ErrorDetail `json:"error,omitempty"`
+}
+
+type ErrorDetail struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
 }
 
 func handleTranscript(w http.ResponseWriter, r *http.Request) {
-	requestID := generateRequestID()
-	logger := createContextLogger(requestID)
-
-	logger.Printf("INFO: Received transcript request from %s", r.RemoteAddr)
+	logger.Info().
+		Str("method", r.Method).
+		Str("remote_addr", r.RemoteAddr).
+		Msg("Received transcript request")
 
 	if r.Method != http.MethodPost {
-		logger.Printf("WARN: Invalid method %s used", r.Method)
+		logger.Warn().
+			Str("method", r.Method).
+			Msg("Invalid method used")
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	var reqBody types.TranscriptsReqBody
 	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
-		logger.Printf("ERROR: Failed to decode request body: %v", err)
+		logger.Error().
+			Err(err).
+			Msg("Failed to decode request body")
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	logger.Printf("INFO: Processing request for organization: %s, room: %s",
-		reqBody.Organization, reqBody.RoomURL)
-
-	// Validate service categories
-	for _, category := range reqBody.ServiceCategories {
-		if !category.IsValid() {
-			logger.Printf("ERROR: Invalid service category provided: %v", category)
-			http.Error(w, "Invalid service category provided", http.StatusBadRequest)
-			return
-		}
-	}
-
-	// Create storage params
-	callData := types.StoreCallDataParams{
-		Organization: reqBody.Organization,
-		RoomURL:      reqBody.RoomURL,
-		Transcript:   reqBody.Transcript,
-	}
-
-	// Create processor params
-	dataForAnalysis := types.ProcessTranscriptParams{
-		ServiceCategories: reqBody.ServiceCategories,
-		RoomURL:           reqBody.RoomURL,
-		Transcript:        reqBody.Transcript,
-	}
+	logger.Info().
+		Str("organization_id", reqBody.OrganizationID).
+		Str("room_url", reqBody.RoomURL).
+		Msg("Processing transcript request")
 
 	// Store transcript asynchronously
 	go func() {
-		logger.Print("INFO: Starting async storage operation")
-		if err := storage.StoreCallData(callData); err != nil {
-			logger.Printf("ERROR: Failed to store transcript: %v", err)
+		logger.Info().Msg("Starting async storage operation")
+
+		if err := supabase.StoreCallData(reqBody); err != nil {
+			logger.Error().
+				Err(err).
+				Msg("Failed to store transcript")
 			return
 		}
-		logger.Print("INFO: Successfully stored transcript data")
+
+		logger.Info().Msg("Successfully stored transcript data")
 	}()
 
 	// Process transcript asynchronously
 	go func() {
-		logger.Print("INFO: Starting async transcript processing")
-		result, err := processor.ProcessTranscript(dataForAnalysis)
+		logger.Info().Msg("Starting async transcript processing")
+		result, err := processor.ProcessTranscript(reqBody)
 		if err != nil {
-			logger.Printf("ERROR: Failed to process transcript: %v", err)
+			logger.Error().
+				Err(err).
+				Msg("Failed to process transcript")
+
+			// Write error response
+			writeErrorResponse(w, http.StatusInternalServerError, "processing_failed", err.Error())
 			return
 		}
-
 		if result {
-			logger.Printf("INFO: Successfully processed transcript with result: %v", result)
-			// TODO: Actually handle result
+			logger.Info().
+				Interface("result", result).
+				Msg("Successfully processed transcript")
 		} else {
-			logger.Print("WARN: Transcript processing completed with no result")
+			logger.Warn().
+				Msg("Transcript processing completed with no result")
 		}
 	}()
 
-	logger.Print("INFO: Request accepted, async processing initiated")
+	logger.Info().Msg("Request accepted, async processing initiated")
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
+
 	response := map[string]string{
-		"status":     "accepted",
-		"message":    "Transcript received and processing started",
-		"request_id": requestID,
+		"status":  "accepted",
+		"message": "Transcript received and processing started",
 	}
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		logger.Printf("ERROR: Failed to encode response: %v", err)
+		logger.Error().
+			Err(err).
+			Msg("Failed to encode response")
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 }
 
-// Helper functions for logging
-
-func generateRequestID() string {
-	// Generate 6 random bytes
-	b := make([]byte, 3) // Will become 6 hex chars
-	if _, err := rand.Read(b); err != nil {
-		// Fallback to timestamp only if crypto rand fails
-		return fmt.Sprintf("%d", time.Now().UnixNano())
+// writeErrorResponse handles writing error responses with consistent logging
+func writeErrorResponse(w http.ResponseWriter, statusCode int, errorCode, message string) {
+	response := GenerateServicesPromptResponse{
+		Status:  "error",
+		Message: "Failed to generate services prompt",
+		Error: &ErrorDetail{
+			Code:    errorCode,
+			Message: message,
+		},
+		IsSchemaPresent: false,
 	}
-	return fmt.Sprintf("%d-%x", time.Now().UnixNano(), b)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logger.Error().
+			Err(err).
+			Msg("Failed to write error response")
+		return
+	}
+
+	logger.Error().
+		Str("error_code", errorCode).
+		Str("error_message", message).
+		Int("status_code", statusCode).
+		Msg("Request failed")
 }
 
-func createContextLogger(requestID string) *log.Logger {
-	return log.New(os.Stdout,
-		fmt.Sprintf("[RequestID: %s] ", requestID),
-		log.Ldate|log.Ltime|log.Lmicroseconds)
+func main() {
+	initLogger()
+
+	// Configure routes
+	http.HandleFunc("/transcript", handleTranscript)
+	// http.HandleFunc("/GenerateServicesPrompt", handleGenerateServicesPrompt)
+
+	logger.Info().
+		Str("port", "8080").
+		Msg("Server starting")
+
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		logger.Fatal().
+			Err(err).
+			Msg("Server failed to start")
+	}
 }

@@ -38,6 +38,11 @@ func CreateAndStoreMetadata(inputs []MetadataInput) error {
 			previousValue = "none"
 		}
 
+		fieldName := input.FieldName
+		if fieldName == "" {
+			fieldName = "new"
+		}
+
 		metadata, err := hsds_types.NewMetadata(
 			input.ResourceID,
 			input.ResourceType,

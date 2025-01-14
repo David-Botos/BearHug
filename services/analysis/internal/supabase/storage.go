@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"reflect"
 
 	"github.com/david-botos/BearHug/services/analysis/internal/hsds_types"
 	"github.com/david-botos/BearHug/services/analysis/internal/types"
@@ -111,50 +110,13 @@ func StoreNewServices(services []*hsds_types.Service) error {
 			return fmt.Errorf("failed to insert service data: %w, data: %s", err, string(data))
 		}
 
-		// Create metadata entries for each non-empty field in the service
-		fields := []struct {
-			name  string
-			value interface{}
-		}{
-			{"name", service.Name},
-			{"organization_id", service.OrganizationID},
-			{"status", service.Status},
-			{"program_id", service.ProgramID},
-			{"alternate_name", service.AlternateName},
-			{"description", service.Description},
-			{"url", service.URL},
-			{"email", service.Email},
-			{"interpretation_services", service.InterpretationServices},
-			{"application_process", service.ApplicationProcess},
-			{"fees_description", service.FeesDescription},
-			{"eligibility_description", service.EligibilityDescription},
-			{"minimum_age", service.MinimumAge},
-			{"maximum_age", service.MaximumAge},
-			{"alert", service.Alert},
-			{"wait_time", service.WaitTime},
-			{"fees", service.Fees},
-			{"licenses", service.Licenses},
-			{"accreditations", service.Accreditations},
-			{"assured_date", service.AssuredDate},
-			{"assurer_email", service.AssurerEmail},
-		}
-
-		// For each non-nil field, create a metadata entry
-		for _, field := range fields {
-			// Skip if the field value is nil or empty string
-			if field.value == nil || (reflect.ValueOf(field.value).Kind() == reflect.String &&
-				reflect.ValueOf(field.value).String() == "") {
-				continue
-			}
-
-			metadataInputs = append(metadataInputs, MetadataInput{
-				ResourceID:       service.ID,
-				ResourceType:     "service",
-				FieldName:        field.name,
-				ReplacementValue: fmt.Sprintf("%v", field.value),
-				LastActionType:   "CREATE",
-			})
-		}
+		// Create metadata entries for non-empty fields
+		metadataInputs = append(metadataInputs, MetadataInput{
+			ResourceID:       service.ID,
+			ResourceType:     "service",
+			ReplacementValue: service.Name,
+			LastActionType:   "CREATE",
+		})
 	}
 
 	// Create metadata for all the new services

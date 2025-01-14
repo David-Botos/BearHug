@@ -30,6 +30,8 @@ func main() {
 	// Process AI response through EL service
 	elevenLabs.StreamAudio(response)
 
+	// Implement software event loop
+
 	// Handle errors accordingly
 	if err != nil {
 		log.Fatalf("Error generating AI response: %v", err)

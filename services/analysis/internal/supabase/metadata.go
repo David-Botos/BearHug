@@ -9,6 +9,7 @@ import (
 // MetadataInput represents the required and optional fields for creating a metadata entry
 type MetadataInput struct {
 	ResourceID       string
+	CallID           string
 	ResourceType     string
 	FieldName        string
 	PreviousValue    string
@@ -45,6 +46,7 @@ func CreateAndStoreMetadata(inputs []MetadataInput) error {
 
 		metadata, err := hsds_types.NewMetadata(
 			input.ResourceID,
+			input.CallID,
 			input.ResourceType,
 			actionType,
 			input.FieldName,

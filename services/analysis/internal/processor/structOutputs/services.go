@@ -8,7 +8,6 @@ import (
 	"github.com/david-botos/BearHug/services/analysis/internal/hsds_types"
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/inference"
 	"github.com/david-botos/BearHug/services/analysis/internal/supabase"
-	"github.com/david-botos/BearHug/services/analysis/internal/types"
 	"github.com/david-botos/BearHug/services/analysis/pkg/logger"
 )
 
@@ -202,18 +201,18 @@ type ServicesExtracted struct {
 	NewServices []ExtractedService `json:"new_services"`
 }
 
-func ServicesExtraction(params types.TranscriptsReqBody) (ServicesExtracted, error) {
+func ServicesExtraction(org_id string, transcript string) (ServicesExtracted, error) {
 	log := logger.Get()
 	log.Info().
-		Str("organization_id", params.OrganizationID).
-		Int("transcript_length", len(params.Transcript)).
+		Str("organization_id", org_id).
+		Int("transcript_length", len(transcript)).
 		Msg("Starting services extraction")
 
-	servicesPrompt, servicesSchema, promptErr := GenerateServicesPrompt(params.OrganizationID, params.Transcript)
+	servicesPrompt, servicesSchema, promptErr := GenerateServicesPrompt(org_id, transcript)
 	if promptErr != nil {
 		log.Error().
 			Err(promptErr).
-			Str("organization_id", params.OrganizationID).
+			Str("organization_id", org_id).
 			Msg("Failed to generate services prompt")
 		return ServicesExtracted{}, fmt.Errorf("failed to generate services prompt: %w", promptErr)
 	}
@@ -258,19 +257,12 @@ func ServicesExtraction(params types.TranscriptsReqBody) (ServicesExtracted, err
 	return servicesExtracted, nil
 }
 
-func HandleExtractedServices(services ServicesExtracted, organizationID string) (*ServiceContext, error) {
+func HandleExtractedServices(services ServicesExtracted, organizationID string, callID string) (*ServiceContext, error) {
 	log := logger.Get()
 	log.Info().
 		Str("organization_id", organizationID).
 		Int("services_count", len(services.NewServices)).
 		Msg("Starting to handle extracted services")
-
-	if !hsds_types.ValidateUUID(organizationID) {
-		log.Error().
-			Str("organization_id", organizationID).
-			Msg("Invalid organization ID format")
-		return nil, fmt.Errorf("invalid organization ID format: must be UUIDv4")
-	}
 
 	verificationResults, err := VerifyServiceUniqueness(services, organizationID)
 	if err != nil {
@@ -353,7 +345,7 @@ func HandleExtractedServices(services ServicesExtracted, organizationID string) 
 		}
 
 		// Store the new services
-		if err := supabase.StoreNewServices(serviceContext.NewServices); err != nil {
+		if err := supabase.StoreNewServices(serviceContext.NewServices, callID); err != nil {
 			log.Error().
 				Err(err).
 				Int("services_count", len(serviceContext.NewServices)).
@@ -368,7 +360,7 @@ func HandleExtractedServices(services ServicesExtracted, organizationID string) 
 
 	// Handle updates to existing services
 	if len(verificationResults.UpdateServices) > 0 {
-		if err := UpdateExistingServices(verificationResults.UpdateServices); err != nil {
+		if err := UpdateExistingServices(verificationResults.UpdateServices, callID); err != nil {
 			log.Error().
 				Err(err).
 				Int("update_count", len(verificationResults.UpdateServices)).

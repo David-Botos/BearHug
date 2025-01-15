@@ -8,7 +8,7 @@ import (
 	"github.com/david-botos/BearHug/services/analysis/pkg/logger"
 )
 
-func ProcessTranscript(params types.TranscriptsReqBody) (bool, error) {
+func ProcessTranscript(params types.ProcTranscriptParams) (bool, error) {
 	log := logger.Get()
 
 	log.Info().
@@ -18,7 +18,7 @@ func ProcessTranscript(params types.TranscriptsReqBody) (bool, error) {
 
 	///* --- Extract services based on the transcript --- *///
 	log.Debug().Msg("Beginning service extraction from transcript")
-	extractedServices, servicesExtractionErr := structOutputs.ServicesExtraction(params)
+	extractedServices, servicesExtractionErr := structOutputs.ServicesExtraction(params.OrganizationID, params.Transcript)
 	if servicesExtractionErr != nil {
 		log.Error().
 			Err(servicesExtractionErr).
@@ -29,7 +29,7 @@ func ProcessTranscript(params types.TranscriptsReqBody) (bool, error) {
 
 	///* --- Verify Service Uniqueness -> Upload or Update --- *///
 	log.Debug().Msg("Beginning to reason on extracted services compared to DB")
-	serviceCtx, serviceUpdateAndUploadErr := structOutputs.HandleExtractedServices(extractedServices, params.OrganizationID)
+	serviceCtx, serviceUpdateAndUploadErr := structOutputs.HandleExtractedServices(extractedServices, params.OrganizationID, params.CallID)
 	if serviceUpdateAndUploadErr != nil {
 		log.Error().
 			Err(serviceUpdateAndUploadErr).
@@ -65,7 +65,7 @@ func ProcessTranscript(params types.TranscriptsReqBody) (bool, error) {
 	// log.Debug().
 	// 	Interface("extracted_details", extractedDetails).
 	// 	Msg("Starting validation of extracted information")
-	// validationResult, validatorErr := validation.ValidateExtractedInfo(extractedDetails, *serviceCtx, params.Transcript)
+	// validationResult, validatorErr := validation.ValidateExtractedInfo(extractedDetails, *serviceCtx, params.Transcript, params.CallID)
 	// if validatorErr != nil {
 	// 	log.Error().
 	// 		Err(validatorErr).
@@ -79,7 +79,7 @@ func ProcessTranscript(params types.TranscriptsReqBody) (bool, error) {
 	// }
 
 	///* --- Store all the details --- *///
-	storageFailureErr := structOutputs.StoreDetails(extractedDetails)
+	storageFailureErr := structOutputs.StoreDetails(extractedDetails, params.CallID)
 	if storageFailureErr != nil {
 		log.Error().
 			Err(storageFailureErr).

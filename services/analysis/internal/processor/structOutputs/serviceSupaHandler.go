@@ -174,7 +174,7 @@ func VerifyServiceUniqueness(services ServicesExtracted, organizationID string) 
 	return results, nil
 }
 
-func UpdateExistingServices(services []ServiceVerificationResult) error {
+func UpdateExistingServices(services []ServiceVerificationResult, callID string) error {
 	log := logger.Get()
 	log.Info().
 		Int("services_count", len(services)).
@@ -202,9 +202,31 @@ func UpdateExistingServices(services []ServiceVerificationResult) error {
 		// Prepare update data using the Changes map
 		updateData := make(map[string]interface{})
 
-		// Add all changed fields to the update data
-		for field, value := range service.Changes {
-			updateData[field] = value
+		// Prepare metadata inputs for each changed field
+		var metadataInputs []supabase.MetadataInput
+
+		// Add all changed fields to the update data and create metadata
+		for field, newValue := range service.Changes {
+			updateData[field] = newValue
+
+			// Get previous value from existing service
+			var previousValue string
+			if existingValue, ok := getFieldValue(service.ExistingService, field); ok {
+				previousValue = fmt.Sprintf("%v", existingValue)
+			} else {
+				previousValue = "new data"
+			}
+
+			metadataInput := supabase.MetadataInput{
+				ResourceID:       service.ExistingService.ID,
+				CallID:           callID,
+				ResourceType:     "service",
+				FieldName:        field,
+				PreviousValue:    previousValue,
+				ReplacementValue: fmt.Sprintf("%v", newValue),
+				LastActionType:   "UPDATE",
+			}
+			metadataInputs = append(metadataInputs, metadataInput)
 		}
 
 		// Add last_modified timestamp
@@ -215,7 +237,6 @@ func UpdateExistingServices(services []ServiceVerificationResult) error {
 			Update(updateData, "", "").
 			Eq("id", service.ExistingService.ID).
 			Execute()
-
 		if err != nil {
 			log.Error().
 				Err(err).
@@ -227,6 +248,16 @@ func UpdateExistingServices(services []ServiceVerificationResult) error {
 				service.ExistingService.ID, err, string(data))
 		}
 
+		// Create metadata entries for all changes
+		if err := supabase.CreateAndStoreMetadata(metadataInputs); err != nil {
+			log.Error().
+				Err(err).
+				Str("service_id", service.ExistingService.ID).
+				Msg("Failed to create metadata entries")
+			return fmt.Errorf("failed to create metadata entries for service %s: %w",
+				service.ExistingService.ID, err)
+		}
+
 		log.Info().
 			Str("service_id", service.ExistingService.ID).
 			Str("service_name", service.ExistingService.Name).
@@ -235,4 +266,14 @@ func UpdateExistingServices(services []ServiceVerificationResult) error {
 
 	log.Info().Msg("All service updates completed successfully")
 	return nil
+}
+
+// Helper function to get field value from service using reflection
+func getFieldValue(service *hsds_types.Service, fieldName string) (interface{}, bool) {
+	val := reflect.ValueOf(service).Elem()
+	field := val.FieldByName(fieldName)
+	if !field.IsValid() {
+		return nil, false
+	}
+	return field.Interface(), true
 }

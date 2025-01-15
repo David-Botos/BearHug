@@ -9,14 +9,14 @@ import (
 	"github.com/david-botos/BearHug/services/analysis/internal/types"
 )
 
-func StoreCallData(params types.TranscriptsReqBody) error {
+func StoreCallData(params types.TranscriptsReqBody) (string, error) {
 
 	log.Printf("Storing transcript data - Organization ID: %s, Room URL: %s, Transcript: %s",
 		params.OrganizationID, params.RoomURL, params.Transcript)
 
 	client, err := InitSupabaseClient()
 	if err != nil {
-		return fmt.Errorf("failed to initialize Supabase client: %w", err)
+		return "", fmt.Errorf("failed to initialize Supabase client: %w", err)
 	}
 
 	// Create the transcript data
@@ -31,17 +31,17 @@ func StoreCallData(params types.TranscriptsReqBody) error {
 		Execute()
 
 	if err != nil {
-		return fmt.Errorf("failed to execute Supabase query: %w, data: %s", err, string(data))
+		return "", fmt.Errorf("failed to execute Supabase query: %w, data: %s", err, string(data))
 	}
 
 	log.Printf("DEBUG: Raw response data: %s", string(data))
 
 	if err := json.Unmarshal(data, &results); err != nil {
-		return fmt.Errorf("failed to unmarshal response: %w, data: %s", err, string(data))
+		return "", fmt.Errorf("failed to unmarshal response: %w, data: %s", err, string(data))
 	}
 
 	if len(results) == 0 {
-		return fmt.Errorf("no results returned from insert")
+		return "", fmt.Errorf("no results returned from insert")
 	}
 
 	transcriptID := results[0].ID
@@ -61,10 +61,18 @@ func StoreCallData(params types.TranscriptsReqBody) error {
 		Execute()
 
 	if err != nil {
-		return fmt.Errorf("failed to insert call data: %w", err)
+		return "", fmt.Errorf("failed to insert call data: %w", err)
 	}
 
-	return nil
+	if err := json.Unmarshal(data, &results); err != nil {
+		return "", fmt.Errorf("failed to unmarshal response: %w, data: %s", err, string(data))
+	}
+
+	callID := results[0].ID
+
+	log.Printf("DEBUG: Call ID: %s", callID)
+
+	return callID, nil
 }
 
 func StoreNewServices(services []*hsds_types.Service) error {

@@ -1000,6 +1000,7 @@ type MetadataOptions struct {
 // NewMetadata creates a new Metadata record with all required fields
 func NewMetadata(
 	resourceID string,
+	callId string,
 	resourceType string,
 	lastActionType string,
 	fieldName string,
@@ -1018,6 +1019,7 @@ func NewMetadata(
 		CreatedAt:        now,
 		UpdatedAt:        now,
 		ID:               id,
+		CallID:           callId,
 		ResourceID:       resourceID,
 		ResourceType:     resourceType,
 		LastActionDate:   now,

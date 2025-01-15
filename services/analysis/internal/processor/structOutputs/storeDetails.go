@@ -7,12 +7,12 @@ import (
 	"github.com/david-botos/BearHug/services/analysis/pkg/logger"
 )
 
-func StoreDetails(extractedDetails []*DetailAnalysisResult) error {
+func StoreDetails(extractedDetails []*DetailAnalysisResult, callID string) error {
 	log := logger.Get()
 	for _, detail := range extractedDetails {
 		if detail.Category == "CAPACITY" {
 			if len(detail.CapacityData.Capacities) > 0 {
-				capacityStorageErr := supabase.StoreNewCapacity(detail.CapacityData.Capacities)
+				capacityStorageErr := supabase.StoreNewCapacity(detail.CapacityData.Capacities, callID)
 				if capacityStorageErr != nil {
 					log.Error().
 						Err(capacityStorageErr).
@@ -21,7 +21,7 @@ func StoreDetails(extractedDetails []*DetailAnalysisResult) error {
 				}
 			}
 			if len(detail.CapacityData.Units) > 0 {
-				unitStorageErr := supabase.StoreNewUnits(detail.CapacityData.Units)
+				unitStorageErr := supabase.StoreNewUnits(detail.CapacityData.Units, callID)
 				if unitStorageErr != nil {
 					log.Error().
 						Err(unitStorageErr).

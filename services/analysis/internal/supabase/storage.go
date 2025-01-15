@@ -106,7 +106,7 @@ func StoreCallData(params types.TranscriptsReqBody) (string, error) {
 }
 
 // StoreNewServices stores multiple service records in Supabase and creates corresponding metadata
-func StoreNewServices(services []*hsds_types.Service) error {
+func StoreNewServices(services []*hsds_types.Service, callID string) error {
 	log := logger.Get()
 
 	client, err := InitSupabaseClient()
@@ -168,6 +168,7 @@ func StoreNewServices(services []*hsds_types.Service) error {
 			ResourceType:     "service",
 			ReplacementValue: "new entry",
 			LastActionType:   "CREATE",
+			CallID:           callID,
 		})
 	}
 
@@ -190,7 +191,7 @@ func StoreNewServices(services []*hsds_types.Service) error {
 }
 
 // StoreNewCapacity stores multiple service capacity records in Supabase and creates corresponding metadata
-func StoreNewCapacity(capacityObjects []*hsds_types.ServiceCapacity) error {
+func StoreNewCapacity(capacityObjects []*hsds_types.ServiceCapacity, callID string) error {
 	log := logger.Get()
 
 	client, err := InitSupabaseClient()
@@ -239,6 +240,7 @@ func StoreNewCapacity(capacityObjects []*hsds_types.ServiceCapacity) error {
 
 		metadataInputs = append(metadataInputs, MetadataInput{
 			ResourceID:       capObj.ID,
+			CallID:           callID,
 			ResourceType:     "service_capacity",
 			ReplacementValue: "new entry",
 			LastActionType:   "CREATE",
@@ -264,7 +266,7 @@ func StoreNewCapacity(capacityObjects []*hsds_types.ServiceCapacity) error {
 }
 
 // StoreNewUnits stores multiple unit records in Supabase and creates corresponding metadata
-func StoreNewUnits(unitObjects []*hsds_types.Unit) error {
+func StoreNewUnits(unitObjects []*hsds_types.Unit, callID string) error {
 	log := logger.Get()
 
 	client, err := InitSupabaseClient()
@@ -313,6 +315,7 @@ func StoreNewUnits(unitObjects []*hsds_types.Unit) error {
 
 		metadataInputs = append(metadataInputs, MetadataInput{
 			ResourceID:       unitObj.ID,
+			CallID:           callID,
 			ResourceType:     "unit",
 			ReplacementValue: "new entry",
 			LastActionType:   "CREATE",

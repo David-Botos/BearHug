@@ -51,7 +51,7 @@ func HandleTriagedAnalysis(
 
 			switch DetailCategory(cat) {
 			case CapacityCategory:
-				result, err = analyzeCapacityDetails(transcript, serviceCtx)
+				result, err = analyzeCapacityCategoryDetails(transcript, serviceCtx)
 			// case SchedulingCategory:
 			//     result, err = analyzeSchedulingDetails(transcript, serviceCtx)
 			// case ProgramCategory:

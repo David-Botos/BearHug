@@ -46,9 +46,9 @@ type FixAttempt struct {
 	Iteration       int
 }
 
-func ValidateExtractedInfo(extractedDetails []*structOutputs.DetailAnalysisResult, serviceCtx structOutputs.ServiceContext, transcript string) (bool, error) {
+func ValidateExtractedInfo(extractedDetails []*structOutputs.DetailAnalysisResult, serviceCtx structOutputs.ServiceContext, transcript string, callID string) (bool, error) {
 
-	submitValidatedOutputRes, submitValidatedOutputErr := SubmitValidatedOutput(extractedDetails)
+	submitValidatedOutputRes, submitValidatedOutputErr := SubmitValidatedOutput(extractedDetails, callID)
 	if submitValidatedOutputErr != nil {
 		return false, fmt.Errorf(`Error occurred when submitting validated output in supa: %w`, submitValidatedOutputErr)
 	}

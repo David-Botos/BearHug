@@ -40,3 +40,10 @@ type TranscriptsReqBody struct {
 	RoomURL        string `json:"room_url"`
 	Transcript     string `json:"transcript"`
 }
+
+type ProcTranscriptParams struct {
+	OrganizationID string `json:"organization_id"`
+	RoomURL        string `json:"room_url"`
+	Transcript     string `json:"transcript"`
+	CallID         string `json:"call_fk"`
+}

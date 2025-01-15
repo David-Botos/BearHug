@@ -9,6 +9,7 @@ import (
 	"github.com/agnivade/levenshtein"
 	"github.com/david-botos/BearHug/services/analysis/internal/hsds_types"
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/inference"
+	"github.com/david-botos/BearHug/services/analysis/internal/supabase"
 	"github.com/david-botos/BearHug/services/analysis/pkg/logger"
 )
 
@@ -102,7 +103,7 @@ func writeServiceDescription(builder *strings.Builder, service hsds_types.Servic
 }
 
 // analyzeCapacityDetails processes service capacity and unit information
-func analyzeCapacityDetails(transcript string, serviceCtx ServiceContext) (DetailAnalysisResult, error) {
+func analyzeCapacityCategoryDetails(transcript string, serviceCtx ServiceContext) (DetailAnalysisResult, error) {
 	log := logger.Get()
 	log.Debug().Msg("Starting capacity details analysis")
 
@@ -166,7 +167,7 @@ func infToCapacityAndUnits(inferenceResult map[string]interface{}, serviceCtx Se
 	log := logger.Get()
 	log.Debug().Msg("Starting inference result conversion")
 
-	// Convert the inference result to our structured type
+	// Unmarshal inference result
 	jsonData, err := json.Marshal(inferenceResult)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to marshal inference result")
@@ -179,19 +180,28 @@ func infToCapacityAndUnits(inferenceResult map[string]interface{}, serviceCtx Se
 		return nil, nil, fmt.Errorf("error unmarshaling to structured output: %w", err)
 	}
 
-	// Combine existing and new services
+	// Fetch all existing units once
+	existingUnits, err := supabase.FetchUnits()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to fetch existing units")
+		return nil, nil, fmt.Errorf("error fetching existing units: %w", err)
+	}
+
+	// Create map for quick unit lookup
+	unitMap := make(map[string]*hsds_types.Unit)
+	for _, unit := range existingUnits {
+		unitCopy := unit // Create copy to avoid pointer issues
+		unitMap[strings.ToLower(strings.TrimSpace(unit.Name))] = &unitCopy
+	}
+
+	// Match services first (keeping existing logic)
 	totalServices := make([]*hsds_types.Service, 0, len(serviceCtx.ExistingServices)+len(serviceCtx.NewServices))
 	totalServices = append(totalServices, serviceCtx.ExistingServices...)
 	for _, newService := range serviceCtx.NewServices {
 		totalServices = append(totalServices, newService)
 	}
 
-	log.Debug().
-		Int("total_services", len(totalServices)).
-		Int("capacities", len(output.Capacities)).
-		Msg("Starting service matching")
-
-	// Track matching results
+	// Track service matching results
 	matchResults := make([]serviceMatchResult, len(output.Capacities))
 	for i, capacity := range output.Capacities {
 		matchedService := findMatchingService(capacity, totalServices)
@@ -200,16 +210,9 @@ func infToCapacityAndUnits(inferenceResult map[string]interface{}, serviceCtx Se
 			service:   matchedService,
 			matched:   matchedService != nil,
 		}
-
-		if matchedService != nil {
-			log.Debug().
-				Str("service_name", capacity.ServiceName).
-				Str("matched_id", matchedService.ID).
-				Msg("Service matched successfully")
-		}
 	}
 
-	// Check for unmatched capacities
+	// Check for unmatched services
 	var unmatched []string
 	for _, result := range matchResults {
 		if !result.matched {
@@ -217,36 +220,76 @@ func infToCapacityAndUnits(inferenceResult map[string]interface{}, serviceCtx Se
 		}
 	}
 	if len(unmatched) > 0 {
-		log.Error().
-			Strs("unmatched_services", unmatched).
-			Msg("Failed to match all services")
+		log.Error().Strs("unmatched_services", unmatched).Msg("Failed to match all services")
 		return nil, nil, fmt.Errorf("unable to match services for: %s", strings.Join(unmatched, ", "))
 	}
 
-	// Create arrays for results
-	units := make([]*hsds_types.Unit, 0, len(matchResults))
+	// Arrays for results
+	var newUnits []*hsds_types.Unit
 	capacities := make([]*hsds_types.ServiceCapacity, 0, len(matchResults))
 
-	// Process matched capacities
+	// Process matched capacities with unit reconciliation
 	for _, match := range matchResults {
 		log.Debug().
 			Str("service_name", match.inference.ServiceName).
 			Str("unit_name", match.inference.UnitName).
 			Msg("Processing capacity entry")
 
-		// Create the Unit
-		unitOpts := &hsds_types.UnitOptions{}
-		unit, err := hsds_types.NewUnit(match.inference.UnitName, unitOpts)
-		if err != nil {
-			log.Error().
-				Err(err).
-				Str("unit_name", match.inference.UnitName).
-				Msg("Failed to create unit")
-			return nil, nil, fmt.Errorf("error creating unit for %s: %w", match.inference.UnitName, err)
-		}
-		units = append(units, unit)
+		normalizedUnitName := strings.ToLower(strings.TrimSpace(match.inference.UnitName))
+		var unit *hsds_types.Unit
 
-		// Create the ServiceCapacity
+		// Check for existing unit
+		if existingUnit, exists := unitMap[normalizedUnitName]; exists {
+			unit = existingUnit
+			log.Debug().
+				Str("unit_name", match.inference.UnitName).
+				Str("unit_id", unit.ID).
+				Msg("Using existing unit")
+		} else {
+			// Try fuzzy matching for units
+			var bestMatch *hsds_types.Unit
+			threshold := 0.8
+			highestSimilarity := 0.0
+
+			for _, existing := range existingUnits {
+				similarity := calculateStringSimilarity(normalizedUnitName,
+					strings.ToLower(strings.TrimSpace(existing.Name)))
+				if similarity > threshold && similarity > highestSimilarity {
+					highestSimilarity = similarity
+					existingCopy := existing
+					bestMatch = &existingCopy
+				}
+			}
+
+			if bestMatch != nil {
+				unit = bestMatch
+				log.Debug().
+					Str("unit_name", match.inference.UnitName).
+					Str("matched_unit", unit.Name).
+					Float64("similarity", highestSimilarity).
+					Msg("Found fuzzy unit match")
+			} else {
+				// Create new unit if no match found
+				unitOpts := &hsds_types.UnitOptions{}
+				newUnit, err := hsds_types.NewUnit(match.inference.UnitName, unitOpts)
+				if err != nil {
+					log.Error().
+						Err(err).
+						Str("unit_name", match.inference.UnitName).
+						Msg("Failed to create unit")
+					return nil, nil, fmt.Errorf("error creating unit for %s: %w",
+						match.inference.UnitName, err)
+				}
+				unit = newUnit
+				newUnits = append(newUnits, unit)
+				log.Debug().
+					Str("unit_name", match.inference.UnitName).
+					Str("unit_id", unit.ID).
+					Msg("Created new unit")
+			}
+		}
+
+		// Create ServiceCapacity with reconciled unit
 		capOpts := &hsds_types.ServiceCapacityOptions{
 			Maximum: match.inference.Maximum,
 		}
@@ -266,17 +309,18 @@ func infToCapacityAndUnits(inferenceResult map[string]interface{}, serviceCtx Se
 				Str("service_id", match.service.ID).
 				Str("unit_id", unit.ID).
 				Msg("Failed to create service capacity")
-			return nil, nil, fmt.Errorf("error creating service capacity for unit %s: %w", unit.ID, err)
+			return nil, nil, fmt.Errorf("error creating service capacity for unit %s: %w",
+				unit.ID, err)
 		}
 		capacities = append(capacities, serviceCapacity)
 	}
 
 	log.Info().
-		Int("units_created", len(units)).
+		Int("units_created", len(newUnits)).
 		Int("capacities_created", len(capacities)).
 		Msg("Successfully converted inference results")
 
-	return capacities, units, nil
+	return capacities, newUnits, nil
 }
 
 // findMatchingService attempts to find the corresponding service for a capacity

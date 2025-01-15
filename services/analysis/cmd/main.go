@@ -10,12 +10,7 @@ import (
 	"github.com/david-botos/BearHug/services/analysis/pkg/logger"
 )
 
-type genServicesPrompt struct {
-	OrganizationID string `json:"organization_id"`
-	Transcript     string `json:"transcript"`
-}
-
-type GenerateServicesPromptResponse struct {
+type GenerateErrorResponse struct {
 	Status                  string       `json:"status"`
 	Message                 string       `json:"message"`
 	GeneratedServicesPrompt string       `json:"generated_services_prompt"`
@@ -59,79 +54,46 @@ func handleTranscript(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Info().
-		Str("organization_id", reqBody.OrganizationID).
-		Str("room_url", reqBody.RoomURL).
-		Str("request_id", requestID).
-		Int("transcript_length", len(reqBody.Transcript)).
-		Msg("Initiating parallel processing operations")
-
-	// Store transcript asynchronously
-	go func() {
-		log.Info().
+	// Store transcript synchronously
+	callID, err := supabase.StoreCallData(reqBody)
+	if err != nil {
+		log.Error().
+			Err(err).
 			Str("request_id", requestID).
 			Str("organization_id", reqBody.OrganizationID).
-			Msg("Starting async transcript storage")
+			Msg("Failed to persist transcript data in storage")
+		writeErrorResponse(w, http.StatusInternalServerError, "storage_failed", err.Error())
+		return
+	}
 
-		if err := supabase.StoreCallData(reqBody); err != nil {
-			log.Error().
-				Err(err).
-				Str("request_id", requestID).
-				Str("organization_id", reqBody.OrganizationID).
-				Msg("Failed to persist transcript data in storage")
-			return
-		}
+	// Create a new reqBody with callID
+	procTranscriptParams := types.ProcTranscriptParams{
+		OrganizationID: reqBody.OrganizationID,
+		RoomURL:        reqBody.RoomURL,
+		Transcript:     reqBody.Transcript,
+		CallID:         callID,
+	}
 
-		log.Info().
+	// Process transcript synchronously
+	result, err := processor.ProcessTranscript(procTranscriptParams)
+	if err != nil {
+		log.Error().
+			Err(err).
 			Str("request_id", requestID).
 			Str("organization_id", reqBody.OrganizationID).
-			Msg("Successfully persisted transcript data")
-	}()
-
-	// Process transcript asynchronously
-	go func() {
-		log.Info().
-			Str("request_id", requestID).
-			Str("organization_id", reqBody.OrganizationID).
-			Msg("Starting async transcript analysis")
-
-		result, err := processor.ProcessTranscript(reqBody)
-		if err != nil {
-			log.Error().
-				Err(err).
-				Str("request_id", requestID).
-				Str("organization_id", reqBody.OrganizationID).
-				Msg("Transcript analysis failed")
-
-			writeErrorResponse(w, http.StatusInternalServerError, "processing_failed", err.Error())
-			return
-		}
-
-		if result {
-			log.Info().
-				Str("request_id", requestID).
-				Str("organization_id", reqBody.OrganizationID).
-				Bool("success", result).
-				Msg("Transcript analysis completed successfully")
-		} else {
-			log.Warn().
-				Str("request_id", requestID).
-				Str("organization_id", reqBody.OrganizationID).
-				Msg("Transcript analysis completed with no actionable results")
-		}
-	}()
-
-	log.Info().
-		Str("request_id", requestID).
-		Str("organization_id", reqBody.OrganizationID).
-		Msg("Request accepted, async operations initiated")
+			Msg("Transcript analysis failed")
+		writeErrorResponse(w, http.StatusInternalServerError, "processing_failed", err.Error())
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusAccepted)
+	w.WriteHeader(http.StatusOK)
 
-	response := map[string]string{
-		"status":  "accepted",
-		"message": "Transcript received and processing started",
+	response := map[string]interface{}{
+		"status":  "success",
+		"message": "Transcript processed successfully",
+		"call_id": callID,
+		"result":  result,
 	}
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
@@ -147,7 +109,7 @@ func handleTranscript(w http.ResponseWriter, r *http.Request) {
 func writeErrorResponse(w http.ResponseWriter, statusCode int, errorCode, message string) {
 	log := logger.Get()
 
-	response := GenerateServicesPromptResponse{
+	response := GenerateErrorResponse{
 		Status:  "error",
 		Message: "Failed to generate services prompt",
 		Error: &ErrorDetail{

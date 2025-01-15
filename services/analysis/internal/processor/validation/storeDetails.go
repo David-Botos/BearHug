@@ -5,6 +5,7 @@ import (
 	"github.com/david-botos/BearHug/services/analysis/internal/supabase"
 )
 
+// Not using this
 func SubmitValidatedOutput(validatedDetails []*structOutputs.DetailAnalysisResult) (bool, error) {
 	for _, item := range validatedDetails {
 		switch item.Category {

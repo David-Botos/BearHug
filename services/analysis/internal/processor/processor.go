@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/structOutputs"
-	"github.com/david-botos/BearHug/services/analysis/internal/processor/validation"
 	"github.com/david-botos/BearHug/services/analysis/internal/types"
 	"github.com/david-botos/BearHug/services/analysis/pkg/logger"
 )
@@ -63,22 +62,32 @@ func ProcessTranscript(params types.TranscriptsReqBody) (bool, error) {
 	}
 
 	///* --- Validate the Entire Output --- *///
-	log.Debug().
-		Interface("extracted_details", extractedDetails).
-		Msg("Starting validation of extracted information")
-	validationResult, validatorErr := validation.ValidateExtractedInfo(extractedDetails, *serviceCtx, params.Transcript)
-	if validatorErr != nil {
+	// log.Debug().
+	// 	Interface("extracted_details", extractedDetails).
+	// 	Msg("Starting validation of extracted information")
+	// validationResult, validatorErr := validation.ValidateExtractedInfo(extractedDetails, *serviceCtx, params.Transcript)
+	// if validatorErr != nil {
+	// 	log.Error().
+	// 		Err(validatorErr).
+	// 		Msg("Validation failed for extracted information")
+	// 	return false, fmt.Errorf("error when attempting to validate the information extracted from transcript: %w", validatorErr)
+	// }
+
+	// if !validationResult {
+	// 	log.Error().Msg("Validation failed with unhandled error")
+	// 	return false, fmt.Errorf("validation failed with unhandled error")
+	// }
+
+	///* --- Store all the details --- *///
+	storageFailureErr := structOutputs.StoreDetails(extractedDetails)
+	if storageFailureErr != nil {
 		log.Error().
-			Err(validatorErr).
-			Msg("Validation failed for extracted information")
-		return false, fmt.Errorf("error when attempting to validate the information extracted from transcript: %w", validatorErr)
+			Err(storageFailureErr).
+			Msg("Failed to store details from triaged analysis")
+		return false, fmt.Errorf("error storing details: %w", storageFailureErr)
 	}
 
-	if !validationResult {
-		log.Error().Msg("Validation failed with unhandled error")
-		return false, fmt.Errorf("validation failed with unhandled error")
-	}
-
+	// TODO: update this to log the complete extraction details
 	log.Info().
 		Str("organization_id", params.OrganizationID).
 		Msg("Successfully completed transcript processing")

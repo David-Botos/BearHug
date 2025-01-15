@@ -1,3 +1,4 @@
+// TODO: make sure this is sophisticated enough
 package structOutputs
 
 import (

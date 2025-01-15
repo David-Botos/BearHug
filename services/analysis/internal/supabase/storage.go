@@ -110,11 +110,10 @@ func StoreNewServices(services []*hsds_types.Service) error {
 			return fmt.Errorf("failed to insert service data: %w, data: %s", err, string(data))
 		}
 
-		// Create metadata entries for non-empty fields
 		metadataInputs = append(metadataInputs, MetadataInput{
 			ResourceID:       service.ID,
 			ResourceType:     "service",
-			ReplacementValue: service.Name,
+			ReplacementValue: "new entry",
 			LastActionType:   "CREATE",
 		})
 	}
@@ -134,6 +133,9 @@ func StoreNewCapacity(capacityObjects []*hsds_types.ServiceCapacity) error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize Supabase client: %w", err)
 	}
+
+	// Create a slice to collect metadata entries
+	var metadataInputs []MetadataInput
 
 	for _, capObj := range capacityObjects {
 		capacityData := map[string]interface{}{
@@ -158,7 +160,22 @@ func StoreNewCapacity(capacityObjects []*hsds_types.ServiceCapacity) error {
 		if err != nil {
 			return fmt.Errorf("failed to insert capacity data: %w, data: %s", err, string(data))
 		}
+
+		metadataInputs = append(metadataInputs, MetadataInput{
+			ResourceID:       capObj.ID,
+			ResourceType:     "service_capacity",
+			ReplacementValue: "new entry",
+			LastActionType:   "CREATE",
+		})
 	}
+
+	// Create metadata for all the new capacity data
+	if len(metadataInputs) > 0 {
+		if err := CreateAndStoreMetadata(metadataInputs); err != nil {
+			return fmt.Errorf("failed to create metadata for capacity objs: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -167,6 +184,9 @@ func StoreNewUnits(unitObjects []*hsds_types.Unit) error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize Supabase client: %w", err)
 	}
+
+	// Create a slice to collect metadata entries
+	var metadataInputs []MetadataInput
 
 	for _, unitObj := range unitObjects {
 		unitsData := map[string]interface{}{
@@ -191,6 +211,21 @@ func StoreNewUnits(unitObjects []*hsds_types.Unit) error {
 		if err != nil {
 			return fmt.Errorf("failed to insert unit data: %w, data: %s", err, string(data))
 		}
+
+		metadataInputs = append(metadataInputs, MetadataInput{
+			ResourceID:       unitObj.ID,
+			ResourceType:     "unit",
+			ReplacementValue: "new entry",
+			LastActionType:   "CREATE",
+		})
 	}
+
+	// Create metadata for all the new unit data
+	if len(metadataInputs) > 0 {
+		if err := CreateAndStoreMetadata(metadataInputs); err != nil {
+			return fmt.Errorf("failed to create metadata for unit objs: %w", err)
+		}
+	}
+
 	return nil
 }

@@ -1,29 +1,47 @@
 package structOutputs
 
 import (
+	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/david-botos/BearHug/services/analysis/internal/hsds_types"
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/inference"
 	"github.com/david-botos/BearHug/services/analysis/internal/supabase"
-	"github.com/david-botos/BearHug/services/analysis/internal/types"
-	"github.com/joho/godotenv"
+	"github.com/david-botos/BearHug/services/analysis/pkg/logger"
 )
 
 func GenerateServicesPrompt(organization_id string, transcript string) (string, inference.ToolInputSchema, error) {
-	// fetch and store the organization and its services from supa
+	log := logger.Get()
+	log.Debug().
+		Str("organization_id", organization_id).
+		Msg("Generating services prompt")
+
 	orgName, orgNameFetchErr := supabase.FetchOrganizationName(organization_id)
 	if orgNameFetchErr != nil {
+		log.Error().
+			Err(orgNameFetchErr).
+			Str("organization_id", organization_id).
+			Msg("Failed to fetch organization name")
 		return "", inference.ToolInputSchema{}, fmt.Errorf("organization_lookup_failed: %w", orgNameFetchErr)
 	}
 
+	log.Debug().
+		Str("organization_name", orgName).
+		Msg("Successfully fetched organization name")
+
 	orgServices, orgServicesFetchErr := supabase.FetchOrganizationServices(organization_id)
 	if orgServicesFetchErr != nil {
+		log.Error().
+			Err(orgServicesFetchErr).
+			Str("organization_id", organization_id).
+			Msg("Failed to fetch organization services")
 		return "", inference.ToolInputSchema{}, fmt.Errorf("services_lookup_failed: %w", orgServicesFetchErr)
 	}
+
+	log.Debug().
+		Int("services_count", len(orgServices)).
+		Msg("Successfully fetched organization services")
 
 	// Format existing services into a readable string
 	var servicesText string
@@ -160,115 +178,220 @@ var ServicesSchema = inference.ToolInputSchema{
 	Required: []string{"new_services"},
 }
 
-func ServicesExtraction(params types.TranscriptsReqBody) (map[string]interface{}, error) {
-	// Generate Prompt and Schema for Services
-	servicesPrompt, servicesSchema, promptErr := GenerateServicesPrompt(params.OrganizationID, params.Transcript)
+type ExtractedService struct {
+	// Required fields
+	Name        string                       `json:"name"`
+	Status      hsds_types.ServiceStatusEnum `json:"status"`
+	Description string                       `json:"description"`
+
+	// Optional fields
+	AlternateName          *string  `json:"alternate_name,omitempty"`
+	URL                    *string  `json:"url,omitempty"`
+	Email                  *string  `json:"email,omitempty"`
+	InterpretationServices *string  `json:"interpretation_services,omitempty"`
+	ApplicationProcess     *string  `json:"application_process,omitempty"`
+	FeesDescription        *string  `json:"fees_description,omitempty"`
+	Accreditations         *string  `json:"accreditations,omitempty"`
+	EligibilityDescription *string  `json:"eligibility_description,omitempty"`
+	MinimumAge             *float64 `json:"minimum_age,omitempty"`
+	MaximumAge             *float64 `json:"maximum_age,omitempty"`
+	Alert                  *string  `json:"alert,omitempty"`
+}
+type ServicesExtracted struct {
+	NewServices []ExtractedService `json:"new_services"`
+}
+
+func ServicesExtraction(org_id string, transcript string) (ServicesExtracted, error) {
+	log := logger.Get()
+	log.Info().
+		Str("organization_id", org_id).
+		Int("transcript_length", len(transcript)).
+		Msg("Starting services extraction")
+
+	servicesPrompt, servicesSchema, promptErr := GenerateServicesPrompt(org_id, transcript)
 	if promptErr != nil {
-		return nil, fmt.Errorf("failed to generate services prompt: %w", promptErr)
+		log.Error().
+			Err(promptErr).
+			Str("organization_id", org_id).
+			Msg("Failed to generate services prompt")
+		return ServicesExtracted{}, fmt.Errorf("failed to generate services prompt: %w", promptErr)
 	}
-	fmt.Printf("Generated prompt: %s\n", servicesPrompt)
-	fmt.Printf("Created schema: %+v\n", servicesSchema)
 
-	// Declare Claude Inference Client
-	workingDir, err := os.Getwd()
+	client, err := inference.InitInferenceClient()
 	if err != nil {
-		panic(err)
+		log.Error().
+			Err(err).
+			Msg("Failed to initialize inference client")
+		return ServicesExtracted{}, fmt.Errorf("failed to initialize inference client: %w", err)
 	}
-	envPath := filepath.Join(workingDir, ".env")
-	if err := godotenv.Load(envPath); err != nil {
-		panic(err)
-	}
-	fmt.Printf("envPath declared as: %s\n", envPath)
-	client := inference.NewClient(os.Getenv("ANTHROPIC_API_KEY"))
-	fmt.Printf("Initialized client with API key length: %d\n", len(os.Getenv("ANTHROPIC_API_KEY")))
 
-	// Get Services Inference Result
+	log.Debug().Msg("Running Claude inference for services extraction")
 	servicesInferenceResult, servicesInferenceResultErr := client.RunClaudeInference(inference.PromptParams{Prompt: servicesPrompt, Schema: servicesSchema})
 	if servicesInferenceResultErr != nil {
-		fmt.Printf("Error occurred during inference: %v\n", err)
-		return nil, fmt.Errorf("error reading response: %w", err)
+		log.Error().
+			Err(servicesInferenceResultErr).
+			Msg("Error occurred during services inference")
+		return ServicesExtracted{}, fmt.Errorf("error reading response: %w", servicesInferenceResultErr)
 	}
-	return servicesInferenceResult, nil
+
+	jsonBytes, err := json.Marshal(servicesInferenceResult)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("Failed to marshal response map to JSON")
+		return ServicesExtracted{}, fmt.Errorf("failed to marshal response map: %w", err)
+	}
+
+	var servicesExtracted ServicesExtracted
+	if err := json.Unmarshal(jsonBytes, &servicesExtracted); err != nil {
+		log.Error().
+			Err(err).
+			Msg("Failed to unmarshal Claude inference response")
+		return ServicesExtracted{}, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	log.Info().
+		Int("extracted_services_count", len(servicesExtracted.NewServices)).
+		Msg("Successfully completed services extraction")
+
+	return servicesExtracted, nil
 }
 
-func ConvertInferenceToServices(inferenceResult map[string]interface{}, orgID string) ([]*hsds_types.Service, error) {
-	rawServices, ok := inferenceResult["new_services"].([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid services format in inference result")
+func HandleExtractedServices(extractedServices ServicesExtracted, organizationID string, callID string) (ServiceContext, error) {
+	log := logger.Get()
+	log.Info().
+		Str("organization_id", organizationID).
+		Int("services_count", len(extractedServices.NewServices)).
+		Msg("Starting to handle extracted services")
+
+	verificationResults, err := VerifyServiceUniqueness(extractedServices, organizationID)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Str("organization_id", organizationID).
+			Msg("Failed to verify service uniqueness")
+		return ServiceContext{}, fmt.Errorf("failed to verify service uniqueness: %w", err)
 	}
 
-	var services []*hsds_types.Service
-	for _, raw := range rawServices {
-		rawMap, ok := raw.(map[string]interface{})
-		if !ok {
-			continue
+	log.Debug().
+		Int("new_services", len(verificationResults.NewServices)).
+		Int("update_services", len(verificationResults.UpdateServices)).
+		Int("unchanged_services", len(verificationResults.UnchangedServices)).
+		Msg("Service verification completed")
+
+	serviceContext := ServiceContext{
+		ExistingServices: make([]*hsds_types.Service, 0),
+		NewServices:      make([]*hsds_types.Service, 0),
+	}
+
+	// Convert new services to proper HSDS format
+	if len(verificationResults.NewServices) > 0 {
+		for _, extractedService := range verificationResults.NewServices {
+			log.Debug().
+				Str("service_name", extractedService.Name).
+				Msg("Processing new service")
+			opts := &hsds_types.ServiceOptions{
+				AlternateName:          extractedService.AlternateName,
+				Description:            &extractedService.Description,
+				URL:                    extractedService.URL,
+				Email:                  extractedService.Email,
+				InterpretationServices: extractedService.InterpretationServices,
+				ApplicationProcess:     extractedService.ApplicationProcess,
+				FeesDescription:        extractedService.FeesDescription,
+				Accreditations:         extractedService.Accreditations,
+				EligibilityDescription: extractedService.EligibilityDescription,
+				MinimumAge:             extractedService.MinimumAge,
+				MaximumAge:             extractedService.MaximumAge,
+				Alert:                  extractedService.Alert,
+			}
+
+			service, err := hsds_types.NewService(
+				organizationID,
+				extractedService.Name,
+				extractedService.Status,
+				opts,
+			)
+			if err != nil {
+				return ServiceContext{}, fmt.Errorf("error converting new service '%s': %w", extractedService.Name, err)
+			}
+
+			hsdsService := &hsds_types.Service{
+				ID:                     service.ID,
+				OrganizationID:         service.OrganizationID,
+				Name:                   service.Name,
+				Status:                 service.Status,
+				ProgramID:              service.ProgramID,
+				AlternateName:          service.AlternateName,
+				Description:            service.Description,
+				URL:                    service.URL,
+				Email:                  service.Email,
+				InterpretationServices: service.InterpretationServices,
+				ApplicationProcess:     service.ApplicationProcess,
+				FeesDescription:        service.FeesDescription,
+				EligibilityDescription: service.EligibilityDescription,
+				MinimumAge:             service.MinimumAge,
+				MaximumAge:             service.MaximumAge,
+				Alert:                  service.Alert,
+				WaitTime:               service.WaitTime,
+				Fees:                   service.Fees,
+				Licenses:               service.Licenses,
+				Accreditations:         service.Accreditations,
+				AssuredDate:            service.AssuredDate,
+				AssurerEmail:           service.AssurerEmail,
+				LastModified:           service.LastModified,
+				CreatedAt:              service.CreatedAt,
+				UpdatedAt:              service.UpdatedAt,
+			}
+			serviceContext.NewServices = append(serviceContext.NewServices, hsdsService)
 		}
 
-		status, err := parseServiceStatus(rawMap["status"].(string))
-		if err != nil {
-			continue
+		// Store the new services
+		if err := supabase.StoreNewServices(serviceContext.NewServices, callID); err != nil {
+			log.Error().
+				Err(err).
+				Int("services_count", len(serviceContext.NewServices)).
+				Msg("Failed to store new services")
+			return ServiceContext{}, fmt.Errorf("failed to store new services: %w", err)
 		}
 
-		opts := &hsds_types.ServiceOptions{
-			Description:            getStringPtr(rawMap["description"]),
-			AlternateName:          getStringPtr(rawMap["alternate_name"]),
-			URL:                    getStringPtr(rawMap["url"]),
-			Email:                  getStringPtr(rawMap["email"]),
-			InterpretationServices: getStringPtr(rawMap["interpretation_services"]),
-			ApplicationProcess:     getStringPtr(rawMap["application_process"]),
-			FeesDescription:        getStringPtr(rawMap["fees_description"]),
-			Accreditations:         getStringPtr(rawMap["accreditations"]),
-			EligibilityDescription: getStringPtr(rawMap["eligibility_description"]),
-			MinimumAge:             getFloat64Ptr(rawMap["minimum_age"]),
-			MaximumAge:             getFloat64Ptr(rawMap["maximum_age"]),
-			Alert:                  getStringPtr(rawMap["alert"]),
+		log.Info().
+			Int("stored_services_count", len(serviceContext.NewServices)).
+			Msg("Successfully stored new services")
+	}
+
+	// Handle updates to existing services
+	if len(verificationResults.UpdateServices) > 0 {
+		if err := UpdateExistingServices(verificationResults.UpdateServices, callID); err != nil {
+			log.Error().
+				Err(err).
+				Int("update_count", len(verificationResults.UpdateServices)).
+				Msg("Failed to update existing services")
+			return ServiceContext{}, fmt.Errorf("failed to update existing services: %w", err)
 		}
 
-		service, err := hsds_types.NewService(orgID, rawMap["name"].(string), status, opts)
-		if err != nil {
-			continue
+		// Add updated services to ExistingServices in serviceContext
+		for _, updatedService := range verificationResults.UpdateServices {
+			serviceContext.ExistingServices = append(serviceContext.ExistingServices, updatedService.ExistingService)
 		}
-		services = append(services, service)
+
+		log.Info().
+			Int("updated_services_count", len(verificationResults.UpdateServices)).
+			Msg("Successfully updated existing services")
 	}
 
-	return services, nil
-}
+	// Add unchanged services to ExistingServices in serviceContext
+	if len(verificationResults.UnchangedServices) > 0 {
+		serviceContext.ExistingServices = append(serviceContext.ExistingServices, verificationResults.UnchangedServices...)
 
-func getStringPtr(v interface{}) *string {
-	if v == nil {
-		return nil
+		log.Debug().
+			Int("unchanged_services_count", len(verificationResults.UnchangedServices)).
+			Msg("Added unchanged services to service context")
 	}
-	s, ok := v.(string)
-	if !ok {
-		return nil
-	}
-	return &s
-}
 
-func getFloat64Ptr(v interface{}) *float64 {
-	if v == nil {
-		return nil
-	}
-	switch n := v.(type) {
-	case float64:
-		return &n
-	case int:
-		f := float64(n)
-		return &f
-	default:
-		return nil
-	}
-}
+	log.Info().
+		Int("new_services", len(serviceContext.NewServices)).
+		Int("existing_services", len(serviceContext.ExistingServices)).
+		Msg("Service context preparation completed")
 
-func parseServiceStatus(status string) (hsds_types.ServiceStatusEnum, error) {
-	switch status {
-	case "active":
-		return hsds_types.ServiceStatusActive, nil
-	case "inactive":
-		return hsds_types.ServiceStatusInactive, nil
-	case "defunct":
-		return hsds_types.ServiceStatusDefunct, nil
-	default:
-		return "", fmt.Errorf("invalid service status: %s", status)
-	}
+	return serviceContext, nil
 }

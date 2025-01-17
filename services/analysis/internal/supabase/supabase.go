@@ -12,16 +12,13 @@ import (
 func InitSupabaseClient() (*supabase.Client, error) {
 	workingDir, err := os.Getwd()
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("error getting working directory: %w", err)
 	}
 	envPath := filepath.Join(workingDir, ".env")
 	if err := godotenv.Load(envPath); err != nil {
-		panic(err)
-	}
-	fmt.Printf("envPath declared as: %s\n", envPath)
-	if err != nil {
 		return nil, fmt.Errorf("error loading .env file: %w", err)
 	}
+	fmt.Printf("envPath declared as: %s\n", envPath)
 
 	// Get environment variables
 	supabaseURL := os.Getenv("SUPABASE_URL")

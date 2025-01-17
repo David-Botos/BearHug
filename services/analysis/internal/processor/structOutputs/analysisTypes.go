@@ -22,7 +22,7 @@ type CategoryDescription struct {
 
 // ServiceContext holds both existing and new services for context
 type ServiceContext struct {
-	ExistingServices []hsds_types.Service
+	ExistingServices []*hsds_types.Service
 	NewServices      []*hsds_types.Service
 }
 

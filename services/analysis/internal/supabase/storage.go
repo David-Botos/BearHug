@@ -3,20 +3,27 @@ package supabase
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/david-botos/BearHug/services/analysis/internal/hsds_types"
 	"github.com/david-botos/BearHug/services/analysis/internal/types"
+	"github.com/david-botos/BearHug/services/analysis/pkg/logger"
 )
 
-func StoreCallData(params types.TranscriptsReqBody) error {
+// StoreCallData stores transcript and call data in Supabase and returns the call ID
+// It creates two records: one in the transcripts table and one in the calls table
+func StoreCallData(params types.TranscriptsReqBody) (string, error) {
+	log := logger.Get() // Get instance of custom logger
 
-	log.Printf("Storing transcript data - Organization ID: %s, Room URL: %s, Transcript: %s",
-		params.OrganizationID, params.RoomURL, params.Transcript)
+	// Log the incoming request with structured fields
+	log.Info().
+		Str("organization_id", params.OrganizationID).
+		Str("room_url", params.RoomURL).
+		Str("transcript", params.Transcript).
+		Msg("Storing transcript data")
 
 	client, err := InitSupabaseClient()
 	if err != nil {
-		return fmt.Errorf("failed to initialize Supabase client: %w", err)
+		return "", fmt.Errorf("failed to initialize Supabase client: %w", err)
 	}
 
 	// Create the transcript data
@@ -31,22 +38,35 @@ func StoreCallData(params types.TranscriptsReqBody) error {
 		Execute()
 
 	if err != nil {
-		return fmt.Errorf("failed to execute Supabase query: %w, data: %s", err, string(data))
+		log.Error().
+			Err(err).
+			Str("data", string(data)).
+			Msg("Failed to execute Supabase query")
+		return "", fmt.Errorf("failed to execute Supabase query: %w, data: %s", err, string(data))
 	}
 
-	log.Printf("DEBUG: Raw response data: %s", string(data))
+	log.Debug().
+		RawJSON("response_data", data).
+		Msg("Received response from Supabase")
 
 	if err := json.Unmarshal(data, &results); err != nil {
-		return fmt.Errorf("failed to unmarshal response: %w, data: %s", err, string(data))
+		log.Error().
+			Err(err).
+			Str("data", string(data)).
+			Msg("Failed to unmarshal response")
+		return "", fmt.Errorf("failed to unmarshal response: %w, data: %s", err, string(data))
 	}
 
 	if len(results) == 0 {
-		return fmt.Errorf("no results returned from insert")
+		log.Error().Msg("No results returned from insert")
+		return "", fmt.Errorf("no results returned from insert")
 	}
 
 	transcriptID := results[0].ID
 
-	log.Printf("DEBUG: Transcript ID: %s", transcriptID)
+	log.Debug().
+		Str("transcript_id", transcriptID).
+		Msg("Successfully created transcript record")
 
 	// Create the call data
 	callData := map[string]interface{}{
@@ -61,17 +81,44 @@ func StoreCallData(params types.TranscriptsReqBody) error {
 		Execute()
 
 	if err != nil {
-		return fmt.Errorf("failed to insert call data: %w", err)
+		log.Error().
+			Err(err).
+			Interface("call_data", callData).
+			Msg("Failed to insert call data")
+		return "", fmt.Errorf("failed to insert call data: %w", err)
 	}
 
-	return nil
+	if err := json.Unmarshal(data, &results); err != nil {
+		log.Error().
+			Err(err).
+			Str("data", string(data)).
+			Msg("Failed to unmarshal call response")
+		return "", fmt.Errorf("failed to unmarshal response: %w, data: %s", err, string(data))
+	}
+
+	callID := results[0].ID
+
+	log.Debug().
+		Str("call_id", callID).
+		Msg("Successfully created call record")
+
+	return callID, nil
 }
 
-func StoreNewServices(services []*hsds_types.Service) error {
+// StoreNewServices stores multiple service records in Supabase and creates corresponding metadata
+func StoreNewServices(services []*hsds_types.Service, callID string) error {
+	log := logger.Get()
+
 	client, err := InitSupabaseClient()
 	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("Failed to initialize Supabase client")
 		return fmt.Errorf("failed to initialize Supabase client: %w", err)
 	}
+
+	// Create a slice to collect metadata entries
+	var metadataInputs []MetadataInput
 
 	for _, service := range services {
 		serviceData := map[string]interface{}{
@@ -104,18 +151,59 @@ func StoreNewServices(services []*hsds_types.Service) error {
 			Insert(serviceData, false, "", "representation", "").
 			Execute()
 		if err != nil {
+			log.Error().
+				Err(err).
+				Str("service_id", service.ID).
+				Interface("service_data", serviceData).
+				Msg("Failed to insert service data")
 			return fmt.Errorf("failed to insert service data: %w, data: %s", err, string(data))
 		}
+
+		log.Debug().
+			Str("service_id", service.ID).
+			Msg("Successfully created service record")
+
+		metadataInputs = append(metadataInputs, MetadataInput{
+			ResourceID:       service.ID,
+			ResourceType:     "service",
+			ReplacementValue: "new entry",
+			LastActionType:   "CREATE",
+			CallID:           callID,
+		})
+	}
+
+	// Create metadata for all the new services
+	if len(metadataInputs) > 0 {
+		if err := CreateAndStoreMetadata(metadataInputs); err != nil {
+			log.Error().
+				Err(err).
+				Int("metadata_count", len(metadataInputs)).
+				Msg("Failed to create metadata for services")
+			return fmt.Errorf("failed to create metadata for services: %w", err)
+		}
+
+		log.Info().
+			Int("metadata_count", len(metadataInputs)).
+			Msg("Successfully created metadata for services")
 	}
 
 	return nil
 }
 
-func StoreNewCapacity(capacityObjects []*hsds_types.ServiceCapacity) error {
+// StoreNewCapacity stores multiple service capacity records in Supabase and creates corresponding metadata
+func StoreNewCapacity(capacityObjects []*hsds_types.ServiceCapacity, callID string) error {
+	log := logger.Get()
+
 	client, err := InitSupabaseClient()
 	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("Failed to initialize Supabase client")
 		return fmt.Errorf("failed to initialize Supabase client: %w", err)
 	}
+
+	// Create a slice to collect metadata entries
+	var metadataInputs []MetadataInput
 
 	for _, capObj := range capacityObjects {
 		capacityData := map[string]interface{}{
@@ -138,17 +226,59 @@ func StoreNewCapacity(capacityObjects []*hsds_types.ServiceCapacity) error {
 			Insert(capacityData, false, "", "representation", "").
 			Execute()
 		if err != nil {
+			log.Error().
+				Err(err).
+				Str("capacity_id", capObj.ID).
+				Interface("capacity_data", capacityData).
+				Msg("Failed to insert capacity data")
 			return fmt.Errorf("failed to insert capacity data: %w, data: %s", err, string(data))
 		}
+
+		log.Debug().
+			Str("capacity_id", capObj.ID).
+			Msg("Successfully created capacity record")
+
+		metadataInputs = append(metadataInputs, MetadataInput{
+			ResourceID:       capObj.ID,
+			CallID:           callID,
+			ResourceType:     "service_capacity",
+			ReplacementValue: "new entry",
+			LastActionType:   "CREATE",
+		})
 	}
+
+	// Create metadata for all the new capacity data
+	if len(metadataInputs) > 0 {
+		if err := CreateAndStoreMetadata(metadataInputs); err != nil {
+			log.Error().
+				Err(err).
+				Int("metadata_count", len(metadataInputs)).
+				Msg("Failed to create metadata for capacity objects")
+			return fmt.Errorf("failed to create metadata for capacity objs: %w", err)
+		}
+
+		log.Info().
+			Int("metadata_count", len(metadataInputs)).
+			Msg("Successfully created metadata for capacity objects")
+	}
+
 	return nil
 }
 
-func StoreNewUnits(unitObjects []*hsds_types.Unit) error {
+// StoreNewUnits stores multiple unit records in Supabase and creates corresponding metadata
+func StoreNewUnits(unitObjects []*hsds_types.Unit, callID string) error {
+	log := logger.Get()
+
 	client, err := InitSupabaseClient()
 	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("Failed to initialize Supabase client")
 		return fmt.Errorf("failed to initialize Supabase client: %w", err)
 	}
+
+	// Create a slice to collect metadata entries
+	var metadataInputs []MetadataInput
 
 	for _, unitObj := range unitObjects {
 		unitsData := map[string]interface{}{
@@ -171,8 +301,41 @@ func StoreNewUnits(unitObjects []*hsds_types.Unit) error {
 			Insert(unitsData, false, "", "representation", "").
 			Execute()
 		if err != nil {
+			log.Error().
+				Err(err).
+				Str("unit_id", unitObj.ID).
+				Interface("unit_data", unitsData).
+				Msg("Failed to insert unit data")
 			return fmt.Errorf("failed to insert unit data: %w, data: %s", err, string(data))
 		}
+
+		log.Debug().
+			Str("unit_id", unitObj.ID).
+			Msg("Successfully created unit record")
+
+		metadataInputs = append(metadataInputs, MetadataInput{
+			ResourceID:       unitObj.ID,
+			CallID:           callID,
+			ResourceType:     "unit",
+			ReplacementValue: "new entry",
+			LastActionType:   "CREATE",
+		})
 	}
+
+	// Create metadata for all the new unit data
+	if len(metadataInputs) > 0 {
+		if err := CreateAndStoreMetadata(metadataInputs); err != nil {
+			log.Error().
+				Err(err).
+				Int("metadata_count", len(metadataInputs)).
+				Msg("Failed to create metadata for unit objects")
+			return fmt.Errorf("failed to create metadata for unit objs: %w", err)
+		}
+
+		log.Info().
+			Int("metadata_count", len(metadataInputs)).
+			Msg("Successfully created metadata for unit objects")
+	}
+
 	return nil
 }

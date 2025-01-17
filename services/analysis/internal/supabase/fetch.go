@@ -113,7 +113,7 @@ func FetchUnits() ([]hsds_types.Unit, error) {
 		ForeignTable: "",
 	}
 
-	data, _, err := client.From("Unit").
+	data, _, err := client.From("unit").
 		Select(`
 			id,
 			name,

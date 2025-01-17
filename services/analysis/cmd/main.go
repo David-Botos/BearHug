@@ -8,6 +8,7 @@ import (
 	"github.com/david-botos/BearHug/services/analysis/internal/supabase"
 	"github.com/david-botos/BearHug/services/analysis/internal/types"
 	"github.com/david-botos/BearHug/services/analysis/pkg/logger"
+	"github.com/rs/zerolog/log"
 )
 
 type GenerateErrorResponse struct {
@@ -21,6 +22,22 @@ type GenerateErrorResponse struct {
 type ErrorDetail struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
+}
+
+func handleTest(w http.ResponseWriter, r *http.Request) {
+	units, fetchUnitsErr := supabase.FetchUnits()
+	if fetchUnitsErr != nil {
+		writeErrorResponse(w, http.StatusInternalServerError, "fetching_failed", fetchUnitsErr.Error())
+		return
+	}
+	response := units[0]
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Error().
+			Err(err).
+			Msg("Failed to serialize response JSON")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func handleTranscript(w http.ResponseWriter, r *http.Request) {
@@ -146,6 +163,7 @@ func main() {
 
 	// Configure routes
 	http.HandleFunc("/transcript", handleTranscript)
+	http.HandleFunc("/test", handleTest)
 
 	port := "8080"
 	log.Info().

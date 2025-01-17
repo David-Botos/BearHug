@@ -167,6 +167,13 @@ func infToCapacityAndUnits(inferenceResult map[string]interface{}, serviceCtx Se
 	log := logger.Get()
 	log.Debug().Msg("Starting inference result conversion")
 
+	// Log input data
+	log.Debug().
+		Interface("inference_result", inferenceResult).
+		Int("existing_services_count", len(serviceCtx.ExistingServices)).
+		Int("new_services_count", len(serviceCtx.NewServices)).
+		Msg("Input data state")
+
 	// Unmarshal inference result
 	jsonData, err := json.Marshal(inferenceResult)
 	if err != nil {
@@ -180,6 +187,12 @@ func infToCapacityAndUnits(inferenceResult map[string]interface{}, serviceCtx Se
 		return nil, nil, fmt.Errorf("error unmarshaling to structured output: %w", err)
 	}
 
+	// Log parsed output structure
+	log.Debug().
+		Int("capacity_count", len(output.Capacities)).
+		Interface("capacities", output.Capacities).
+		Msg("Parsed inference output")
+
 	// Fetch all existing units once
 	existingUnits, err := supabase.FetchUnits()
 	if err != nil {
@@ -187,11 +200,19 @@ func infToCapacityAndUnits(inferenceResult map[string]interface{}, serviceCtx Se
 		return nil, nil, fmt.Errorf("error fetching existing units: %w", err)
 	}
 
+	log.Debug().
+		Int("existing_units_count", len(existingUnits)).
+		Msg("Fetched existing units")
+
 	// Create map for quick unit lookup
 	unitMap := make(map[string]*hsds_types.Unit)
 	for _, unit := range existingUnits {
-		unitCopy := unit // Create copy to avoid pointer issues
+		unitCopy := unit
 		unitMap[strings.ToLower(strings.TrimSpace(unit.Name))] = &unitCopy
+		log.Debug().
+			Str("unit_name", unit.Name).
+			Str("unit_id", unit.ID).
+			Msg("Mapped existing unit")
 	}
 
 	// Match services first (keeping existing logic)
@@ -201,14 +222,47 @@ func infToCapacityAndUnits(inferenceResult map[string]interface{}, serviceCtx Se
 		totalServices = append(totalServices, newService)
 	}
 
+	log.Debug().
+		Int("total_services_count", len(totalServices)).
+		Msg("Combined service list created")
+
+	// Detailed logging of available services
+	for _, service := range totalServices {
+		log.Debug().
+			Str("service_id", service.ID).
+			Str("service_name", service.Name).
+			Interface("service_alternateNames", service.AlternateName).
+			Msg("Available service for matching")
+	}
+
 	// Track service matching results
 	matchResults := make([]serviceMatchResult, len(output.Capacities))
 	for i, capacity := range output.Capacities {
+		log.Debug().
+			Str("capacity_service_name", capacity.ServiceName).
+			Str("capacity_unit_name", capacity.UnitName).
+			Int("available", int(capacity.Available)).
+			Interface("maximum", capacity.Maximum).
+			Msg("Attempting to match capacity")
+
 		matchedService := findMatchingService(capacity, totalServices)
 		matchResults[i] = serviceMatchResult{
 			inference: capacity,
 			service:   matchedService,
 			matched:   matchedService != nil,
+		}
+
+		if matchedService != nil {
+			log.Debug().
+				Str("service_name", capacity.ServiceName).
+				Str("matched_service_id", matchedService.ID).
+				Str("matched_service_name", matchedService.Name).
+				Msg("Successfully matched service")
+		} else {
+			log.Debug().
+				Str("service_name", capacity.ServiceName).
+				Interface("total_services", totalServices).
+				Msg("No matching service found")
 		}
 	}
 
@@ -220,7 +274,11 @@ func infToCapacityAndUnits(inferenceResult map[string]interface{}, serviceCtx Se
 		}
 	}
 	if len(unmatched) > 0 {
-		log.Error().Strs("unmatched_services", unmatched).Msg("Failed to match all services")
+		log.Error().
+			Strs("unmatched_services", unmatched).
+			Interface("total_services", totalServices).
+			Interface("match_results", matchResults).
+			Msg("Failed to match all services")
 		return nil, nil, fmt.Errorf("unable to match services for: %s", strings.Join(unmatched, ", "))
 	}
 
@@ -308,6 +366,7 @@ func infToCapacityAndUnits(inferenceResult map[string]interface{}, serviceCtx Se
 				Err(err).
 				Str("service_id", match.service.ID).
 				Str("unit_id", unit.ID).
+				Interface("options", capOpts).
 				Msg("Failed to create service capacity")
 			return nil, nil, fmt.Errorf("error creating service capacity for unit %s: %w",
 				unit.ID, err)

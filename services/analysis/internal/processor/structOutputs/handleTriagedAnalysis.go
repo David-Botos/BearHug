@@ -15,6 +15,16 @@ func HandleTriagedAnalysis(
 ) ([]*DetailAnalysisResult, error) {
 	log := logger.Get()
 
+	log.Info().Msg("Entered HandleTriagedAnalysis")
+
+	// Log input data
+	log.Debug().
+		Interface("transcript", transcript).
+		Int("num_identified_detail_categories", len(identifiedDetails.DetectedCategories)).
+		Int("existing_services_count", len(serviceCtx.ExistingServices)).
+		Int("new_services_count", len(serviceCtx.NewServices)).
+		Msg("Input data state")
+
 	log.Debug().
 		Str("transcript_length", fmt.Sprint(len(transcript))).
 		Msg("Starting triage analysis")

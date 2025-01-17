@@ -257,28 +257,29 @@ func ServicesExtraction(org_id string, transcript string) (ServicesExtracted, er
 	return servicesExtracted, nil
 }
 
-func HandleExtractedServices(services ServicesExtracted, organizationID string, callID string) (*ServiceContext, error) {
+func HandleExtractedServices(extractedServices ServicesExtracted, organizationID string, callID string) (ServiceContext, error) {
 	log := logger.Get()
 	log.Info().
 		Str("organization_id", organizationID).
-		Int("services_count", len(services.NewServices)).
+		Int("services_count", len(extractedServices.NewServices)).
 		Msg("Starting to handle extracted services")
 
-	verificationResults, err := VerifyServiceUniqueness(services, organizationID)
+	verificationResults, err := VerifyServiceUniqueness(extractedServices, organizationID)
 	if err != nil {
 		log.Error().
 			Err(err).
 			Str("organization_id", organizationID).
 			Msg("Failed to verify service uniqueness")
-		return nil, fmt.Errorf("failed to verify service uniqueness: %w", err)
+		return ServiceContext{}, fmt.Errorf("failed to verify service uniqueness: %w", err)
 	}
 
 	log.Debug().
 		Int("new_services", len(verificationResults.NewServices)).
 		Int("update_services", len(verificationResults.UpdateServices)).
+		Int("unchanged_services", len(verificationResults.UnchangedServices)).
 		Msg("Service verification completed")
 
-	serviceContext := &ServiceContext{
+	serviceContext := ServiceContext{
 		ExistingServices: make([]*hsds_types.Service, 0),
 		NewServices:      make([]*hsds_types.Service, 0),
 	}
@@ -311,7 +312,7 @@ func HandleExtractedServices(services ServicesExtracted, organizationID string, 
 				opts,
 			)
 			if err != nil {
-				return nil, fmt.Errorf("error converting new service '%s': %w", extractedService.Name, err)
+				return ServiceContext{}, fmt.Errorf("error converting new service '%s': %w", extractedService.Name, err)
 			}
 
 			hsdsService := &hsds_types.Service{
@@ -350,7 +351,7 @@ func HandleExtractedServices(services ServicesExtracted, organizationID string, 
 				Err(err).
 				Int("services_count", len(serviceContext.NewServices)).
 				Msg("Failed to store new services")
-			return nil, fmt.Errorf("failed to store new services: %w", err)
+			return ServiceContext{}, fmt.Errorf("failed to store new services: %w", err)
 		}
 
 		log.Info().
@@ -365,13 +366,32 @@ func HandleExtractedServices(services ServicesExtracted, organizationID string, 
 				Err(err).
 				Int("update_count", len(verificationResults.UpdateServices)).
 				Msg("Failed to update existing services")
-			return nil, fmt.Errorf("failed to update existing services: %w", err)
+			return ServiceContext{}, fmt.Errorf("failed to update existing services: %w", err)
+		}
+
+		// Add updated services to ExistingServices in serviceContext
+		for _, updatedService := range verificationResults.UpdateServices {
+			serviceContext.ExistingServices = append(serviceContext.ExistingServices, updatedService.ExistingService)
 		}
 
 		log.Info().
 			Int("updated_services_count", len(verificationResults.UpdateServices)).
 			Msg("Successfully updated existing services")
 	}
+
+	// Add unchanged services to ExistingServices in serviceContext
+	if len(verificationResults.UnchangedServices) > 0 {
+		serviceContext.ExistingServices = append(serviceContext.ExistingServices, verificationResults.UnchangedServices...)
+
+		log.Debug().
+			Int("unchanged_services_count", len(verificationResults.UnchangedServices)).
+			Msg("Added unchanged services to service context")
+	}
+
+	log.Info().
+		Int("new_services", len(serviceContext.NewServices)).
+		Int("existing_services", len(serviceContext.ExistingServices)).
+		Msg("Service context preparation completed")
 
 	return serviceContext, nil
 }

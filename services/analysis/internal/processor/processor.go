@@ -52,7 +52,7 @@ func ProcessTranscript(params types.ProcTranscriptParams) (bool, error) {
 	extractedDetails, detailExtractionErr := structOutputs.HandleTriagedAnalysis(
 		params.Transcript,
 		identifiedDetailTypes,
-		*serviceCtx,
+		serviceCtx,
 	)
 	if detailExtractionErr != nil {
 		log.Error().
@@ -83,7 +83,7 @@ func ProcessTranscript(params types.ProcTranscriptParams) (bool, error) {
 	if storageFailureErr != nil {
 		log.Error().
 			Err(storageFailureErr).
-			Msg("Failed to store details from triaged analysis")
+			Msg("Failed to store all details")
 		return false, fmt.Errorf("error storing details: %w", storageFailureErr)
 	}
 

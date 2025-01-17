@@ -166,6 +166,7 @@ type IdentifiedDetails struct {
 	Reasoning          []string `json:"reasoning"`
 }
 
+//TODO: no need for a pointer here
 func IdentifyDetailsForTriagedAnalysis(transcript string) (*IdentifiedDetails, error) {
 	log.Debug().Msg("Generating triage prompt and schema")
 	detailTriagePrompt, detailTriageSchema := GenerateTriagePrompt(transcript)

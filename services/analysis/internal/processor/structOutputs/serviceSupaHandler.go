@@ -23,12 +23,13 @@ type ServiceVerificationResult struct {
 }
 
 type ServiceVerificationResults struct {
-	NewServices    []ExtractedService          // Services to be created
-	UpdateServices []ServiceVerificationResult // Services that need updating
-	Error          error                       // Any error that occurred during verification
+	NewServices       []ExtractedService          // Services to be created
+	UpdateServices    []ServiceVerificationResult // Services that need updating
+	UnchangedServices []*hsds_types.Service
+	Error             error // Any error that occurred during verification
 }
 
-func VerifyServiceUniqueness(services ServicesExtracted, organizationID string) (*ServiceVerificationResults, error) {
+func VerifyServiceUniqueness(services ServicesExtracted, organizationID string) (ServiceVerificationResults, error) {
 	log := logger.Get()
 	log.Info().
 		Str("organization_id", organizationID).
@@ -42,16 +43,17 @@ func VerifyServiceUniqueness(services ServicesExtracted, organizationID string) 
 			Err(err).
 			Str("organization_id", organizationID).
 			Msg("Failed to fetch existing services")
-		return nil, fmt.Errorf("failed to fetch existing services: %w", err)
+		return ServiceVerificationResults{}, fmt.Errorf("failed to fetch existing services: %w", err)
 	}
 
 	log.Debug().
 		Int("existing_services_count", len(existingServices)).
 		Msg("Retrieved existing services")
 
-	results := &ServiceVerificationResults{
-		NewServices:    make([]ExtractedService, 0),
-		UpdateServices: make([]ServiceVerificationResult, 0),
+	results := ServiceVerificationResults{
+		NewServices:       make([]ExtractedService, 0),
+		UpdateServices:    make([]ServiceVerificationResult, 0),
+		UnchangedServices: make([]*hsds_types.Service, 0),
 	}
 
 	// Helper function to check if two strings are similar
@@ -117,6 +119,9 @@ func VerifyServiceUniqueness(services ServicesExtracted, organizationID string) 
 		return changes
 	}
 
+	// Create a map to track which existing services have been processed
+	processedServices := make(map[string]bool)
+
 	// Check each extracted service against existing services
 	for _, extractedService := range services.NewServices {
 		found := false
@@ -129,6 +134,7 @@ func VerifyServiceUniqueness(services ServicesExtracted, organizationID string) 
 			// Check if service names are similar
 			if isSimilarString(existingService.Name, extractedService.Name) {
 				found = true
+				processedServices[existingService.ID] = true
 
 				// Detect what fields have changed
 				changes := detectChanges(&existingService, &extractedService)
@@ -153,6 +159,9 @@ func VerifyServiceUniqueness(services ServicesExtracted, organizationID string) 
 						Str("service_id", existingService.ID).
 						Str("service_name", existingService.Name).
 						Msg("Service matched but no changes needed")
+
+					// Add to UnchangedServices since we found a match with no changes
+					results.UnchangedServices = append(results.UnchangedServices, &existingService)
 				}
 				break
 			}
@@ -166,9 +175,21 @@ func VerifyServiceUniqueness(services ServicesExtracted, organizationID string) 
 		}
 	}
 
+	// Add any existing services that weren't processed (weren't part of the extraction)
+	for _, existingService := range existingServices {
+		if !processedServices[existingService.ID] {
+			log.Debug().
+				Str("service_id", existingService.ID).
+				Str("service_name", existingService.Name).
+				Msg("Adding unprocessed existing service to unchanged services")
+			results.UnchangedServices = append(results.UnchangedServices, &existingService)
+		}
+	}
+
 	log.Info().
 		Int("new_services", len(results.NewServices)).
 		Int("updated_services", len(results.UpdateServices)).
+		Int("unchanged_services", len(results.UnchangedServices)).
 		Msg("Service verification completed")
 
 	return results, nil

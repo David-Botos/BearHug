@@ -9,16 +9,8 @@ The bot uses Deepgram for STT (possibly unimplemented), Claude for conversation 
 ├── README
 └── services
     ├── analysis                        ## AI Analysis Microservice
-    │   ├── cmd
-    │   │   └── main.go                 ## Main Go API server & Routine manager
-    │   ├── go.mod
-    │   ├── go.sum
-    │   ├── internal
-    │   │   └── hsds_types
-    │   │       ├── constructors.go     ##  Go Constructors for the HSDS Schema
-    │   │       └── types.go            ##  Go Structs for the HSDS Schema
-    │   └── pkg
-    │       └── hsds.sql                ## HSDS PostgreSQL database dump
+    │   └── cmd
+    │       └── main.go                 ## Main Go API server & Routine manager
     └── call                            ## Voice Agent Microservice
         ├── requirements.txt
         ├── src
@@ -33,83 +25,68 @@ The bot uses Deepgram for STT (possibly unimplemented), Claude for conversation 
 
 ```
 
-## 🚀 Getting Started
+## 🐳 Docker Configuration for Analysis Microservice
 
 ### Prerequisites
+- Docker installed on your machine
+- `.env` file with the following variables:
+  ```
+  SUPABASE_KEY=your_supabase_key
+  SUPABASE_URL=your_supabase_url
+  ANTHROPIC_API_KEY=your_anthropic_api_key
+  ```
 
-- Python 3.12 or higher
-- Docker (optional) (INCOMPLETE)
-- API Keys:
-  - Daily.co account and API key
-  - Deepgram API key (INCOMPLETE)
-  - ElevenLabs API key 
-  - ElevenLabs voice ID
-  - Anthropic API key
-  - Canonical API key (optional, for metrics) (INCOMPLETE)
+### Building and Running
+1. Build the Docker image:
+   ```bash
+   docker build -t go-server .
+   ```
 
-### 🛠️ Installation
+2. Run the container:
+   ```bash
+   docker run -d \
+     -p 8500:3000 \
+     --env-file ./.env \
+     --name go-server \
+     go-server
+   ```
 
-#### 📥 Local Installation
-
-1. Clone the repository and navigate to the project directory:
+### Utility Commands
+Check if the container is running:
 ```bash
-git clone -b pipecat https://github.com/David-Botos/BearHug.git
-cd BearHug
+docker ps
 ```
 
-2. Create a virtual environment:
+View container logs:
 ```bash
-python -m venv env
+docker logs go-server
 ```
 
-3. Activate the virtual environment:
+Stop the container:
 ```bash
-# On Unix/macOS
-source env/bin/activate
-
-# On Windows (havent tested this)
-.\env\Scripts\activate
+docker stop go-server
 ```
 
-4. Install dependencies:
+Remove the container:
 ```bash
-pip install -r requirements.txt
+docker rm go-server
 ```
 
-5. Create a `.env` file in the project root:
-```env
-DAILY_API_KEY=your_daily_api_key
-ELEVENLABS_API_KEY=your_elevenlabs_api_key
-ELEVENLABS_VOICE_ID=your_voice_id
-ANTHROPIC_API_KEY=your_anthropic_api_key
-DEEPGRAM_API_KEY=your_deepgram_api_key  # INCOMPLETE
-CANONICAL_API_KEY=your_canonical_api_key  # INCOMPLETE
-```
+### Environment Variables
+The service requires the following environment variables:
+- `SUPABASE_KEY`: Your Supabase API key
+- `SUPABASE_URL`: Your Supabase project URL
+- `ANTHROPIC_API_KEY`: Your Anthropic API key
 
-#### 🚀 Local Development
+These should be provided via a `.env` file in the project root directory.
 
-1. Start the server from the src directory:
-```bash
-python src/server.py
-```
+### Ports
+- External Port: 8500
+- Internal Port: 3000
 
-2. The server will start on `http://localhost:7860`
+The service is configured to listen on port 3000 internally and is mapped to port 8500 on your host machine.
 
-3. Visit bots.daily.co and get a phone number, you could also do this programmatically at these endpoints:
-    - https://api.daily.co/v1/list-available-numbers?region=WA&city=Seattle
-    - https://api.daily.co/v1/buy-phone-number
-    - https://api.daily.co/v1/purchased-phone-numbers
 
-    Documentation: https://docs.daily.co/reference/rest-api/phone-numbers
-
-4. Set up ngrok to point to your localhost, exposing the port to Daily's webhook:
-```bash
-ngrok http localhost:7860
-```
-
-5. Configure the phone number to point to the ngrok url with the FastAPI slug to start the server ("/daily_start_bot")
-
-6. Watch it break, beacuse its not done yet 🐒 🦧
 
 ## 📄 License
 

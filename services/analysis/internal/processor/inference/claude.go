@@ -80,26 +80,21 @@ type Usage struct {
 	OutputTokens             int `json:"output_tokens"`
 }
 
-// initInferenceClient initializes the Claude inference client
+// InitInferenceClient initializes the Claude inference client
 func InitInferenceClient() (*ClaudeClient, error) {
 	log := logger.Get()
 	log.Debug().Msg("Initializing Claude inference client")
 
-	workingDir, err := os.Getwd()
-	if err != nil {
-		log.Error().
-			Err(err).
-			Msg("Failed to get working directory for environment setup")
-		return nil, fmt.Errorf("failed to get working directory: %w", err)
-	}
-
-	envPath := filepath.Join(workingDir, ".env")
-	if err := godotenv.Load(envPath); err != nil {
-		log.Error().
-			Err(err).
-			Str("env_path", envPath).
-			Msg("Failed to load environment file")
-		return nil, fmt.Errorf("failed to load env file: %w", err)
+	if os.Getenv("ENVIRONMENT") == "development" {
+		workingDir, err := os.Getwd()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to get working directory")
+			return nil, fmt.Errorf("failed to get working directory: %w", err)
+		}
+		if err := godotenv.Load(filepath.Join(workingDir, ".env")); err != nil {
+			log.Error().Err(err).Msg("Failed to load environment file")
+			return nil, fmt.Errorf("failed to load env file: %w", err)
+		}
 	}
 
 	apiKey := os.Getenv("ANTHROPIC_API_KEY")
@@ -107,11 +102,6 @@ func InitInferenceClient() (*ClaudeClient, error) {
 		log.Error().Msg("ANTHROPIC_API_KEY not found in environment")
 		return nil, fmt.Errorf("ANTHROPIC_API_KEY not found in environment")
 	}
-
-	log.Debug().
-		Str("env_path", envPath).
-		Int("api_key_length", len(apiKey)).
-		Msg("Successfully initialized inference client configuration")
 
 	return NewClient(apiKey), nil
 }

@@ -1,4 +1,5 @@
 // TODO: Enable ENUM types with GORM
+// TODO: move all GORM keys from varchar to UUID
 
 package hsds_types
 
@@ -445,6 +446,7 @@ type Metadata struct {
 
 	// Metadata Data
 	ID               string    `json:"id" gorm:"type:varchar(250);primaryKey;not null" validate:"required"`
+	CallID           string    `json:"call_fk" validate:"required"`
 	ResourceType     string    `json:"resource_type" gorm:"type:text;not null" validate:"required"`
 	LastActionDate   time.Time `json:"last_action_date" gorm:"type:date;not null" validate:"required"`
 	LastActionType   string    `json:"last_action_type" gorm:"type:text;not null" validate:"required"`

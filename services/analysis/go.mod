@@ -2,8 +2,6 @@ module github.com/david-botos/BearHug/services/analysis
 
 go 1.23
 
-toolchain go1.23.4
-
 require (
 	github.com/agnivade/levenshtein v1.2.0
 	github.com/google/uuid v1.6.0

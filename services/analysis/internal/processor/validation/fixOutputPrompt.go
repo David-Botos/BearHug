@@ -180,7 +180,7 @@ func buildContextMaps(
 
 	// Map existing services
 	for i := range serviceCtx.ExistingServices {
-		ctx.ServiceMap[serviceCtx.ExistingServices[i].ID] = &serviceCtx.ExistingServices[i]
+		ctx.ServiceMap[serviceCtx.ExistingServices[i].ID] = serviceCtx.ExistingServices[i]
 	}
 	// Map new services
 	for _, service := range serviceCtx.NewServices {

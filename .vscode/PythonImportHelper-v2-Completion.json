@@ -1,0 +1,828 @@
+[
+    {
+        "label": "json",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "json",
+        "description": "json",
+        "detail": "json",
+        "documentation": {}
+    },
+    {
+        "label": "stringify",
+        "importPath": "flatted",
+        "description": "flatted",
+        "isExtraImport": true,
+        "detail": "flatted",
+        "documentation": {}
+    },
+    {
+        "label": "parse",
+        "importPath": "flatted",
+        "description": "flatted",
+        "isExtraImport": true,
+        "detail": "flatted",
+        "documentation": {}
+    },
+    {
+        "label": "asyncio",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "asyncio",
+        "description": "asyncio",
+        "detail": "asyncio",
+        "documentation": {}
+    },
+    {
+        "label": "os",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "os",
+        "description": "os",
+        "detail": "os",
+        "documentation": {}
+    },
+    {
+        "label": "Optional",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "List",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Literal",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Tuple",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Optional",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Dict",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Tuple",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Optional",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "certifi",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "certifi",
+        "description": "certifi",
+        "detail": "certifi",
+        "documentation": {}
+    },
+    {
+        "label": "ssl",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "ssl",
+        "description": "ssl",
+        "detail": "ssl",
+        "documentation": {}
+    },
+    {
+        "label": "aiohttp",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "aiohttp",
+        "description": "aiohttp",
+        "detail": "aiohttp",
+        "documentation": {}
+    },
+    {
+        "label": "load_dotenv",
+        "importPath": "dotenv",
+        "description": "dotenv",
+        "isExtraImport": true,
+        "detail": "dotenv",
+        "documentation": {}
+    },
+    {
+        "label": "load_dotenv",
+        "importPath": "dotenv",
+        "description": "dotenv",
+        "isExtraImport": true,
+        "detail": "dotenv",
+        "documentation": {}
+    },
+    {
+        "label": "logger",
+        "importPath": "loguru",
+        "description": "loguru",
+        "isExtraImport": true,
+        "detail": "loguru",
+        "documentation": {}
+    },
+    {
+        "label": "logger",
+        "importPath": "loguru",
+        "description": "loguru",
+        "isExtraImport": true,
+        "detail": "loguru",
+        "documentation": {}
+    },
+    {
+        "label": "logger",
+        "importPath": "loguru",
+        "description": "loguru",
+        "isExtraImport": true,
+        "detail": "loguru",
+        "documentation": {}
+    },
+    {
+        "label": "configure",
+        "importPath": "runner",
+        "description": "runner",
+        "isExtraImport": true,
+        "detail": "runner",
+        "documentation": {}
+    },
+    {
+        "label": "generate_shelter_prompt",
+        "importPath": "prompt",
+        "description": "prompt",
+        "isExtraImport": true,
+        "detail": "prompt",
+        "documentation": {}
+    },
+    {
+        "label": "CommunityServices",
+        "importPath": "prompt",
+        "description": "prompt",
+        "isExtraImport": true,
+        "detail": "prompt",
+        "documentation": {}
+    },
+    {
+        "label": "SileroVADAnalyzer",
+        "importPath": "pipecat.audio.vad.silero",
+        "description": "pipecat.audio.vad.silero",
+        "isExtraImport": true,
+        "detail": "pipecat.audio.vad.silero",
+        "documentation": {}
+    },
+    {
+        "label": "EndFrame",
+        "importPath": "pipecat.frames.frames",
+        "description": "pipecat.frames.frames",
+        "isExtraImport": true,
+        "detail": "pipecat.frames.frames",
+        "documentation": {}
+    },
+    {
+        "label": "LLMMessagesFrame",
+        "importPath": "pipecat.frames.frames",
+        "description": "pipecat.frames.frames",
+        "isExtraImport": true,
+        "detail": "pipecat.frames.frames",
+        "documentation": {}
+    },
+    {
+        "label": "Pipeline",
+        "importPath": "pipecat.pipeline.pipeline",
+        "description": "pipecat.pipeline.pipeline",
+        "isExtraImport": true,
+        "detail": "pipecat.pipeline.pipeline",
+        "documentation": {}
+    },
+    {
+        "label": "PipelineRunner",
+        "importPath": "pipecat.pipeline.runner",
+        "description": "pipecat.pipeline.runner",
+        "isExtraImport": true,
+        "detail": "pipecat.pipeline.runner",
+        "documentation": {}
+    },
+    {
+        "label": "PipelineParams",
+        "importPath": "pipecat.pipeline.task",
+        "description": "pipecat.pipeline.task",
+        "isExtraImport": true,
+        "detail": "pipecat.pipeline.task",
+        "documentation": {}
+    },
+    {
+        "label": "PipelineTask",
+        "importPath": "pipecat.pipeline.task",
+        "description": "pipecat.pipeline.task",
+        "isExtraImport": true,
+        "detail": "pipecat.pipeline.task",
+        "documentation": {}
+    },
+    {
+        "label": "AudioBufferProcessor",
+        "importPath": "pipecat.processors.audio.audio_buffer_processor",
+        "description": "pipecat.processors.audio.audio_buffer_processor",
+        "isExtraImport": true,
+        "detail": "pipecat.processors.audio.audio_buffer_processor",
+        "documentation": {}
+    },
+    {
+        "label": "ElevenLabsTTSService",
+        "importPath": "pipecat.services.elevenlabs",
+        "description": "pipecat.services.elevenlabs",
+        "isExtraImport": true,
+        "detail": "pipecat.services.elevenlabs",
+        "documentation": {}
+    },
+    {
+        "label": "AnthropicLLMService",
+        "importPath": "pipecat.services.anthropic",
+        "description": "pipecat.services.anthropic",
+        "isExtraImport": true,
+        "detail": "pipecat.services.anthropic",
+        "documentation": {}
+    },
+    {
+        "label": "AnthropicLLMContext",
+        "importPath": "pipecat.services.anthropic",
+        "description": "pipecat.services.anthropic",
+        "isExtraImport": true,
+        "detail": "pipecat.services.anthropic",
+        "documentation": {}
+    },
+    {
+        "label": "DailyParams",
+        "importPath": "pipecat.transports.services.daily",
+        "description": "pipecat.transports.services.daily",
+        "isExtraImport": true,
+        "detail": "pipecat.transports.services.daily",
+        "documentation": {}
+    },
+    {
+        "label": "DailyTransport",
+        "importPath": "pipecat.transports.services.daily",
+        "description": "pipecat.transports.services.daily",
+        "isExtraImport": true,
+        "detail": "pipecat.transports.services.daily",
+        "documentation": {}
+    },
+    {
+        "label": "Enum",
+        "importPath": "enum",
+        "description": "enum",
+        "isExtraImport": true,
+        "detail": "enum",
+        "documentation": {}
+    },
+    {
+        "label": "Template",
+        "importPath": "string",
+        "description": "string",
+        "isExtraImport": true,
+        "detail": "string",
+        "documentation": {}
+    },
+    {
+        "label": "argparse",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "argparse",
+        "description": "argparse",
+        "detail": "argparse",
+        "documentation": {}
+    },
+    {
+        "label": "DailyRESTHelper",
+        "importPath": "pipecat.transports.services.helpers.daily_rest",
+        "description": "pipecat.transports.services.helpers.daily_rest",
+        "isExtraImport": true,
+        "detail": "pipecat.transports.services.helpers.daily_rest",
+        "documentation": {}
+    },
+    {
+        "label": "DailyRESTHelper",
+        "importPath": "pipecat.transports.services.helpers.daily_rest",
+        "description": "pipecat.transports.services.helpers.daily_rest",
+        "isExtraImport": true,
+        "detail": "pipecat.transports.services.helpers.daily_rest",
+        "documentation": {}
+    },
+    {
+        "label": "DailyRoomParams",
+        "importPath": "pipecat.transports.services.helpers.daily_rest",
+        "description": "pipecat.transports.services.helpers.daily_rest",
+        "isExtraImport": true,
+        "detail": "pipecat.transports.services.helpers.daily_rest",
+        "documentation": {}
+    },
+    {
+        "label": "DailyRoomProperties",
+        "importPath": "pipecat.transports.services.helpers.daily_rest",
+        "description": "pipecat.transports.services.helpers.daily_rest",
+        "isExtraImport": true,
+        "detail": "pipecat.transports.services.helpers.daily_rest",
+        "documentation": {}
+    },
+    {
+        "label": "DailyRoomSipParams",
+        "importPath": "pipecat.transports.services.helpers.daily_rest",
+        "description": "pipecat.transports.services.helpers.daily_rest",
+        "isExtraImport": true,
+        "detail": "pipecat.transports.services.helpers.daily_rest",
+        "documentation": {}
+    },
+    {
+        "label": "DailyRoomObject",
+        "importPath": "pipecat.transports.services.helpers.daily_rest",
+        "description": "pipecat.transports.services.helpers.daily_rest",
+        "isExtraImport": true,
+        "detail": "pipecat.transports.services.helpers.daily_rest",
+        "documentation": {}
+    },
+    {
+        "label": "subprocess",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "subprocess",
+        "description": "subprocess",
+        "detail": "subprocess",
+        "documentation": {}
+    },
+    {
+        "label": "asynccontextmanager",
+        "importPath": "contextlib",
+        "description": "contextlib",
+        "isExtraImport": true,
+        "detail": "contextlib",
+        "documentation": {}
+    },
+    {
+        "label": "FastAPI",
+        "importPath": "fastapi",
+        "description": "fastapi",
+        "isExtraImport": true,
+        "detail": "fastapi",
+        "documentation": {}
+    },
+    {
+        "label": "HTTPException",
+        "importPath": "fastapi",
+        "description": "fastapi",
+        "isExtraImport": true,
+        "detail": "fastapi",
+        "documentation": {}
+    },
+    {
+        "label": "Request",
+        "importPath": "fastapi",
+        "description": "fastapi",
+        "isExtraImport": true,
+        "detail": "fastapi",
+        "documentation": {}
+    },
+    {
+        "label": "CORSMiddleware",
+        "importPath": "fastapi.middleware.cors",
+        "description": "fastapi.middleware.cors",
+        "isExtraImport": true,
+        "detail": "fastapi.middleware.cors",
+        "documentation": {}
+    },
+    {
+        "label": "JSONResponse",
+        "importPath": "fastapi.responses",
+        "description": "fastapi.responses",
+        "isExtraImport": true,
+        "detail": "fastapi.responses",
+        "documentation": {}
+    },
+    {
+        "label": "RedirectResponse",
+        "importPath": "fastapi.responses",
+        "description": "fastapi.responses",
+        "isExtraImport": true,
+        "detail": "fastapi.responses",
+        "documentation": {}
+    },
+    {
+        "label": "StreamingResponse",
+        "importPath": "fastapi.responses",
+        "description": "fastapi.responses",
+        "isExtraImport": true,
+        "detail": "fastapi.responses",
+        "documentation": {}
+    },
+    {
+        "label": "sys",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "sys",
+        "description": "sys",
+        "detail": "sys",
+        "documentation": {}
+    },
+    {
+        "label": "_Known",
+        "kind": 6,
+        "importPath": "services.bot-agent.node_modules.flatted.python.flatted",
+        "description": "services.bot-agent.node_modules.flatted.python.flatted",
+        "peekOfCode": "class _Known:\n    def __init__(self):\n        self.key = []\n        self.value = []\nclass _String:\n    def __init__(self, value):\n        self.value = value\ndef _array_keys(value):\n    keys = []\n    i = 0",
+        "detail": "services.bot-agent.node_modules.flatted.python.flatted",
+        "documentation": {}
+    },
+    {
+        "label": "_String",
+        "kind": 6,
+        "importPath": "services.bot-agent.node_modules.flatted.python.flatted",
+        "description": "services.bot-agent.node_modules.flatted.python.flatted",
+        "peekOfCode": "class _String:\n    def __init__(self, value):\n        self.value = value\ndef _array_keys(value):\n    keys = []\n    i = 0\n    for _ in value:\n        keys.append(i)\n        i += 1\n    return keys",
+        "detail": "services.bot-agent.node_modules.flatted.python.flatted",
+        "documentation": {}
+    },
+    {
+        "label": "parse",
+        "kind": 2,
+        "importPath": "services.bot-agent.node_modules.flatted.python.flatted",
+        "description": "services.bot-agent.node_modules.flatted.python.flatted",
+        "peekOfCode": "def parse(value, *args, **kwargs):\n    json = _json.loads(value, *args, **kwargs)\n    wrapped = []\n    for value in json:\n        wrapped.append(_wrap(value))\n    input = []\n    for value in wrapped:\n        if isinstance(value, _String):\n            input.append(value.value)\n        else:",
+        "detail": "services.bot-agent.node_modules.flatted.python.flatted",
+        "documentation": {}
+    },
+    {
+        "label": "stringify",
+        "kind": 2,
+        "importPath": "services.bot-agent.node_modules.flatted.python.flatted",
+        "description": "services.bot-agent.node_modules.flatted.python.flatted",
+        "peekOfCode": "def stringify(value, *args, **kwargs):\n    known = _Known()\n    input = []\n    output = []\n    i = int(_index(known, input, value))\n    while i < len(input):\n        output.append(_transform(known, input, input[i]))\n        i += 1\n    return _json.dumps(output, *args, **kwargs)",
+        "detail": "services.bot-agent.node_modules.flatted.python.flatted",
+        "documentation": {}
+    },
+    {
+        "label": "stringify",
+        "kind": 2,
+        "importPath": "services.bot-agent.node_modules.flatted.python.test",
+        "description": "services.bot-agent.node_modules.flatted.python.test",
+        "peekOfCode": "def stringify(value):\n    return _stringify(value, separators=(',', ':'))\nassert stringify([None, None]) == '[[null,null]]'\na = []\no = {}\nassert stringify(a) == '[[]]'\nassert stringify(o) == '[{}]'\na.append(a)\no['o'] = o\nassert stringify(a) == '[[\"0\"]]'",
+        "detail": "services.bot-agent.node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "a",
+        "kind": 5,
+        "importPath": "services.bot-agent.node_modules.flatted.python.test",
+        "description": "services.bot-agent.node_modules.flatted.python.test",
+        "peekOfCode": "a = []\no = {}\nassert stringify(a) == '[[]]'\nassert stringify(o) == '[{}]'\na.append(a)\no['o'] = o\nassert stringify(a) == '[[\"0\"]]'\nassert stringify(o) == '[{\"o\":\"0\"}]'\nb = parse(stringify(a))\nassert isinstance(b, list) and b[0] == b",
+        "detail": "services.bot-agent.node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "o",
+        "kind": 5,
+        "importPath": "services.bot-agent.node_modules.flatted.python.test",
+        "description": "services.bot-agent.node_modules.flatted.python.test",
+        "peekOfCode": "o = {}\nassert stringify(a) == '[[]]'\nassert stringify(o) == '[{}]'\na.append(a)\no['o'] = o\nassert stringify(a) == '[[\"0\"]]'\nassert stringify(o) == '[{\"o\":\"0\"}]'\nb = parse(stringify(a))\nassert isinstance(b, list) and b[0] == b\na.append(1)",
+        "detail": "services.bot-agent.node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "o['o']",
+        "kind": 5,
+        "importPath": "services.bot-agent.node_modules.flatted.python.test",
+        "description": "services.bot-agent.node_modules.flatted.python.test",
+        "peekOfCode": "o['o'] = o\nassert stringify(a) == '[[\"0\"]]'\nassert stringify(o) == '[{\"o\":\"0\"}]'\nb = parse(stringify(a))\nassert isinstance(b, list) and b[0] == b\na.append(1)\na.append('two')\na.append(True)\no['one'] = 1\no['two'] = 'two'",
+        "detail": "services.bot-agent.node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "b",
+        "kind": 5,
+        "importPath": "services.bot-agent.node_modules.flatted.python.test",
+        "description": "services.bot-agent.node_modules.flatted.python.test",
+        "peekOfCode": "b = parse(stringify(a))\nassert isinstance(b, list) and b[0] == b\na.append(1)\na.append('two')\na.append(True)\no['one'] = 1\no['two'] = 'two'\no['three'] = True\nassert stringify(a) == '[[\"0\",1,\"1\",true],\"two\"]'\nassert stringify(o) == '[{\"o\":\"0\",\"one\":1,\"two\":\"1\",\"three\":true},\"two\"]'",
+        "detail": "services.bot-agent.node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "o['one']",
+        "kind": 5,
+        "importPath": "services.bot-agent.node_modules.flatted.python.test",
+        "description": "services.bot-agent.node_modules.flatted.python.test",
+        "peekOfCode": "o['one'] = 1\no['two'] = 'two'\no['three'] = True\nassert stringify(a) == '[[\"0\",1,\"1\",true],\"two\"]'\nassert stringify(o) == '[{\"o\":\"0\",\"one\":1,\"two\":\"1\",\"three\":true},\"two\"]'\na.append(o)\no['a'] = a\nassert stringify(a) == '[[\"0\",1,\"1\",true,\"2\"],\"two\",{\"o\":\"2\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"0\"}]'\nassert stringify(o) == '[{\"o\":\"0\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"2\"},\"two\",[\"2\",1,\"1\",true,\"0\"]]'\na.append({'test': 'OK'})",
+        "detail": "services.bot-agent.node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "o['two']",
+        "kind": 5,
+        "importPath": "services.bot-agent.node_modules.flatted.python.test",
+        "description": "services.bot-agent.node_modules.flatted.python.test",
+        "peekOfCode": "o['two'] = 'two'\no['three'] = True\nassert stringify(a) == '[[\"0\",1,\"1\",true],\"two\"]'\nassert stringify(o) == '[{\"o\":\"0\",\"one\":1,\"two\":\"1\",\"three\":true},\"two\"]'\na.append(o)\no['a'] = a\nassert stringify(a) == '[[\"0\",1,\"1\",true,\"2\"],\"two\",{\"o\":\"2\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"0\"}]'\nassert stringify(o) == '[{\"o\":\"0\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"2\"},\"two\",[\"2\",1,\"1\",true,\"0\"]]'\na.append({'test': 'OK'})\na.append([1, 2, 3])",
+        "detail": "services.bot-agent.node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "o['three']",
+        "kind": 5,
+        "importPath": "services.bot-agent.node_modules.flatted.python.test",
+        "description": "services.bot-agent.node_modules.flatted.python.test",
+        "peekOfCode": "o['three'] = True\nassert stringify(a) == '[[\"0\",1,\"1\",true],\"two\"]'\nassert stringify(o) == '[{\"o\":\"0\",\"one\":1,\"two\":\"1\",\"three\":true},\"two\"]'\na.append(o)\no['a'] = a\nassert stringify(a) == '[[\"0\",1,\"1\",true,\"2\"],\"two\",{\"o\":\"2\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"0\"}]'\nassert stringify(o) == '[{\"o\":\"0\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"2\"},\"two\",[\"2\",1,\"1\",true,\"0\"]]'\na.append({'test': 'OK'})\na.append([1, 2, 3])\no['test'] = {'test': 'OK'}",
+        "detail": "services.bot-agent.node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "o['a']",
+        "kind": 5,
+        "importPath": "services.bot-agent.node_modules.flatted.python.test",
+        "description": "services.bot-agent.node_modules.flatted.python.test",
+        "peekOfCode": "o['a'] = a\nassert stringify(a) == '[[\"0\",1,\"1\",true,\"2\"],\"two\",{\"o\":\"2\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"0\"}]'\nassert stringify(o) == '[{\"o\":\"0\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"2\"},\"two\",[\"2\",1,\"1\",true,\"0\"]]'\na.append({'test': 'OK'})\na.append([1, 2, 3])\no['test'] = {'test': 'OK'}\no['array'] = [1, 2, 3]\nassert stringify(a) == '[[\"0\",1,\"1\",true,\"2\",\"3\",\"4\"],\"two\",{\"o\":\"2\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"0\",\"test\":\"3\",\"array\":\"4\"},{\"test\":\"5\"},[1,2,3],\"OK\"]'\nassert stringify(o) == '[{\"o\":\"0\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"2\",\"test\":\"3\",\"array\":\"4\"},\"two\",[\"2\",1,\"1\",true,\"0\",\"3\",\"4\"],{\"test\":\"5\"},[1,2,3],\"OK\"]'\na2 = parse(stringify(a));",
+        "detail": "services.bot-agent.node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "o['test']",
+        "kind": 5,
+        "importPath": "services.bot-agent.node_modules.flatted.python.test",
+        "description": "services.bot-agent.node_modules.flatted.python.test",
+        "peekOfCode": "o['test'] = {'test': 'OK'}\no['array'] = [1, 2, 3]\nassert stringify(a) == '[[\"0\",1,\"1\",true,\"2\",\"3\",\"4\"],\"two\",{\"o\":\"2\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"0\",\"test\":\"3\",\"array\":\"4\"},{\"test\":\"5\"},[1,2,3],\"OK\"]'\nassert stringify(o) == '[{\"o\":\"0\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"2\",\"test\":\"3\",\"array\":\"4\"},\"two\",[\"2\",1,\"1\",true,\"0\",\"3\",\"4\"],{\"test\":\"5\"},[1,2,3],\"OK\"]'\na2 = parse(stringify(a));\no2 = parse(stringify(o));\nassert a2[0] == a2\nassert o2['o'] == o2\nassert a2[1] == 1 and a2[2] == 'two' and a2[3] == True and isinstance(a2[4], dict)\nassert a2[4] == a2[4]['o'] and a2 == a2[4]['o']['a']",
+        "detail": "services.bot-agent.node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "o['array']",
+        "kind": 5,
+        "importPath": "services.bot-agent.node_modules.flatted.python.test",
+        "description": "services.bot-agent.node_modules.flatted.python.test",
+        "peekOfCode": "o['array'] = [1, 2, 3]\nassert stringify(a) == '[[\"0\",1,\"1\",true,\"2\",\"3\",\"4\"],\"two\",{\"o\":\"2\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"0\",\"test\":\"3\",\"array\":\"4\"},{\"test\":\"5\"},[1,2,3],\"OK\"]'\nassert stringify(o) == '[{\"o\":\"0\",\"one\":1,\"two\":\"1\",\"three\":true,\"a\":\"2\",\"test\":\"3\",\"array\":\"4\"},\"two\",[\"2\",1,\"1\",true,\"0\",\"3\",\"4\"],{\"test\":\"5\"},[1,2,3],\"OK\"]'\na2 = parse(stringify(a));\no2 = parse(stringify(o));\nassert a2[0] == a2\nassert o2['o'] == o2\nassert a2[1] == 1 and a2[2] == 'two' and a2[3] == True and isinstance(a2[4], dict)\nassert a2[4] == a2[4]['o'] and a2 == a2[4]['o']['a']\nstr = parse('[{\"prop\":\"1\",\"a\":\"2\",\"b\":\"3\"},{\"value\":123},[\"4\",\"5\"],{\"e\":\"6\",\"t\":\"7\",\"p\":4},{},{\"b\":\"8\"},\"f\",{\"a\":\"9\"},[\"10\"],\"sup\",{\"a\":1,\"d\":2,\"c\":\"7\",\"z\":\"11\",\"h\":1},{\"g\":2,\"a\":\"7\",\"b\":\"12\",\"f\":6},{\"r\":4,\"u\":\"7\",\"c\":5}]')",
+        "detail": "services.bot-agent.node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "a2",
+        "kind": 5,
+        "importPath": "services.bot-agent.node_modules.flatted.python.test",
+        "description": "services.bot-agent.node_modules.flatted.python.test",
+        "peekOfCode": "a2 = parse(stringify(a));\no2 = parse(stringify(o));\nassert a2[0] == a2\nassert o2['o'] == o2\nassert a2[1] == 1 and a2[2] == 'two' and a2[3] == True and isinstance(a2[4], dict)\nassert a2[4] == a2[4]['o'] and a2 == a2[4]['o']['a']\nstr = parse('[{\"prop\":\"1\",\"a\":\"2\",\"b\":\"3\"},{\"value\":123},[\"4\",\"5\"],{\"e\":\"6\",\"t\":\"7\",\"p\":4},{},{\"b\":\"8\"},\"f\",{\"a\":\"9\"},[\"10\"],\"sup\",{\"a\":1,\"d\":2,\"c\":\"7\",\"z\":\"11\",\"h\":1},{\"g\":2,\"a\":\"7\",\"b\":\"12\",\"f\":6},{\"r\":4,\"u\":\"7\",\"c\":5}]')\nassert str['b']['t']['a'] == 'sup' and str['a'][1]['b'][0]['c'] == str['b']['t']\noo = parse('[{\"a\":\"1\",\"b\":\"0\",\"c\":\"2\"},{\"aa\":\"3\"},{\"ca\":\"4\",\"cb\":\"5\",\"cc\":\"6\",\"cd\":\"7\",\"ce\":\"8\",\"cf\":\"9\"},{\"aaa\":\"10\"},{\"caa\":\"4\"},{\"cba\":\"5\"},{\"cca\":\"2\"},{\"cda\":\"4\"},\"value2\",\"value3\",\"value1\"]');\nassert oo['a']['aa']['aaa'] == 'value1' and oo == oo['b'] and oo['c']['ca']['caa'] == oo['c']['ca']",
+        "detail": "services.bot-agent.node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "o2",
+        "kind": 5,
+        "importPath": "services.bot-agent.node_modules.flatted.python.test",
+        "description": "services.bot-agent.node_modules.flatted.python.test",
+        "peekOfCode": "o2 = parse(stringify(o));\nassert a2[0] == a2\nassert o2['o'] == o2\nassert a2[1] == 1 and a2[2] == 'two' and a2[3] == True and isinstance(a2[4], dict)\nassert a2[4] == a2[4]['o'] and a2 == a2[4]['o']['a']\nstr = parse('[{\"prop\":\"1\",\"a\":\"2\",\"b\":\"3\"},{\"value\":123},[\"4\",\"5\"],{\"e\":\"6\",\"t\":\"7\",\"p\":4},{},{\"b\":\"8\"},\"f\",{\"a\":\"9\"},[\"10\"],\"sup\",{\"a\":1,\"d\":2,\"c\":\"7\",\"z\":\"11\",\"h\":1},{\"g\":2,\"a\":\"7\",\"b\":\"12\",\"f\":6},{\"r\":4,\"u\":\"7\",\"c\":5}]')\nassert str['b']['t']['a'] == 'sup' and str['a'][1]['b'][0]['c'] == str['b']['t']\noo = parse('[{\"a\":\"1\",\"b\":\"0\",\"c\":\"2\"},{\"aa\":\"3\"},{\"ca\":\"4\",\"cb\":\"5\",\"cc\":\"6\",\"cd\":\"7\",\"ce\":\"8\",\"cf\":\"9\"},{\"aaa\":\"10\"},{\"caa\":\"4\"},{\"cba\":\"5\"},{\"cca\":\"2\"},{\"cda\":\"4\"},\"value2\",\"value3\",\"value1\"]');\nassert oo['a']['aa']['aaa'] == 'value1' and oo == oo['b'] and oo['c']['ca']['caa'] == oo['c']['ca']\nprint('OK')",
+        "detail": "services.bot-agent.node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "str",
+        "kind": 5,
+        "importPath": "services.bot-agent.node_modules.flatted.python.test",
+        "description": "services.bot-agent.node_modules.flatted.python.test",
+        "peekOfCode": "str = parse('[{\"prop\":\"1\",\"a\":\"2\",\"b\":\"3\"},{\"value\":123},[\"4\",\"5\"],{\"e\":\"6\",\"t\":\"7\",\"p\":4},{},{\"b\":\"8\"},\"f\",{\"a\":\"9\"},[\"10\"],\"sup\",{\"a\":1,\"d\":2,\"c\":\"7\",\"z\":\"11\",\"h\":1},{\"g\":2,\"a\":\"7\",\"b\":\"12\",\"f\":6},{\"r\":4,\"u\":\"7\",\"c\":5}]')\nassert str['b']['t']['a'] == 'sup' and str['a'][1]['b'][0]['c'] == str['b']['t']\noo = parse('[{\"a\":\"1\",\"b\":\"0\",\"c\":\"2\"},{\"aa\":\"3\"},{\"ca\":\"4\",\"cb\":\"5\",\"cc\":\"6\",\"cd\":\"7\",\"ce\":\"8\",\"cf\":\"9\"},{\"aaa\":\"10\"},{\"caa\":\"4\"},{\"cba\":\"5\"},{\"cca\":\"2\"},{\"cda\":\"4\"},\"value2\",\"value3\",\"value1\"]');\nassert oo['a']['aa']['aaa'] == 'value1' and oo == oo['b'] and oo['c']['ca']['caa'] == oo['c']['ca']\nprint('OK')",
+        "detail": "services.bot-agent.node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "oo",
+        "kind": 5,
+        "importPath": "services.bot-agent.node_modules.flatted.python.test",
+        "description": "services.bot-agent.node_modules.flatted.python.test",
+        "peekOfCode": "oo = parse('[{\"a\":\"1\",\"b\":\"0\",\"c\":\"2\"},{\"aa\":\"3\"},{\"ca\":\"4\",\"cb\":\"5\",\"cc\":\"6\",\"cd\":\"7\",\"ce\":\"8\",\"cf\":\"9\"},{\"aaa\":\"10\"},{\"caa\":\"4\"},{\"cba\":\"5\"},{\"cca\":\"2\"},{\"cda\":\"4\"},\"value2\",\"value3\",\"value1\"]');\nassert oo['a']['aa']['aaa'] == 'value1' and oo == oo['b'] and oo['c']['ca']['caa'] == oo['c']['ca']\nprint('OK')",
+        "detail": "services.bot-agent.node_modules.flatted.python.test",
+        "documentation": {}
+    },
+    {
+        "label": "CallState",
+        "kind": 6,
+        "importPath": "services.call.src.bot",
+        "description": "services.call.src.bot",
+        "peekOfCode": "class CallState:\n    def __init__(self):\n        self.is_speaking: bool = False\n        self.has_greeted: bool = False\n        self.has_ended: bool = False\n        self.current_transcription: str = \"\"\n        self.initial_silence_timer: Optional[asyncio.Task] = None\n        self.extended_silence_timer: Optional[asyncio.Task] = None\n        self.participant_id: Optional[str] = None\ndef get_transcript_from_context(context) -> str:",
+        "detail": "services.call.src.bot",
+        "documentation": {}
+    },
+    {
+        "label": "get_transcript_from_context",
+        "kind": 2,
+        "importPath": "services.call.src.bot",
+        "description": "services.call.src.bot",
+        "peekOfCode": "def get_transcript_from_context(context) -> str:\n    # Extract the conversation transcript from the AnthropicLLMContext\n    transcript_lines = []\n    # Access the messages directly from the context\n    for message in context.messages:\n        role = message[\"role\"]\n        content = message[\"content\"]\n        # Skip system messages\n        if role == \"system\":\n            continue",
+        "detail": "services.call.src.bot",
+        "documentation": {}
+    },
+    {
+        "label": "INITIAL_SILENCE_TIMEOUT",
+        "kind": 5,
+        "importPath": "services.call.src.bot",
+        "description": "services.call.src.bot",
+        "peekOfCode": "INITIAL_SILENCE_TIMEOUT = 5  # seconds to wait before first greeting\nMAX_SILENCE_DURATION = 30    # maximum seconds of silence before check-in\nRECONNECTION_TIMEOUT = 60    # seconds to wait before considering call dropped\nclass CallState:\n    def __init__(self):\n        self.is_speaking: bool = False\n        self.has_greeted: bool = False\n        self.has_ended: bool = False\n        self.current_transcription: str = \"\"\n        self.initial_silence_timer: Optional[asyncio.Task] = None",
+        "detail": "services.call.src.bot",
+        "documentation": {}
+    },
+    {
+        "label": "MAX_SILENCE_DURATION",
+        "kind": 5,
+        "importPath": "services.call.src.bot",
+        "description": "services.call.src.bot",
+        "peekOfCode": "MAX_SILENCE_DURATION = 30    # maximum seconds of silence before check-in\nRECONNECTION_TIMEOUT = 60    # seconds to wait before considering call dropped\nclass CallState:\n    def __init__(self):\n        self.is_speaking: bool = False\n        self.has_greeted: bool = False\n        self.has_ended: bool = False\n        self.current_transcription: str = \"\"\n        self.initial_silence_timer: Optional[asyncio.Task] = None\n        self.extended_silence_timer: Optional[asyncio.Task] = None",
+        "detail": "services.call.src.bot",
+        "documentation": {}
+    },
+    {
+        "label": "RECONNECTION_TIMEOUT",
+        "kind": 5,
+        "importPath": "services.call.src.bot",
+        "description": "services.call.src.bot",
+        "peekOfCode": "RECONNECTION_TIMEOUT = 60    # seconds to wait before considering call dropped\nclass CallState:\n    def __init__(self):\n        self.is_speaking: bool = False\n        self.has_greeted: bool = False\n        self.has_ended: bool = False\n        self.current_transcription: str = \"\"\n        self.initial_silence_timer: Optional[asyncio.Task] = None\n        self.extended_silence_timer: Optional[asyncio.Task] = None\n        self.participant_id: Optional[str] = None",
+        "detail": "services.call.src.bot",
+        "documentation": {}
+    },
+    {
+        "label": "CommunityServices",
+        "kind": 6,
+        "importPath": "services.call.src.prompt",
+        "description": "services.call.src.prompt",
+        "peekOfCode": "class CommunityServices(str, Enum):\n    DISABLED_RESOURCES = 'resources for the disabled'\n    UNEMPLOYMENT_RESOURCES = 'resources for the unemployed'\n    FOOD_RESOURCES = 'food resources'\n    CLOTHING_HYGIENE = 'clothing and hygiene resources'\n    TRANSPORTATION = 'transportation resources'\n    MENTAL_HEALTH = 'mental health resources'\n    DOMESTIC_VIOLENCE = 'assistance with domestic violence'\n    EDUCATION = 'education assistance'\n    FINANCIAL = 'financial assistance'",
+        "detail": "services.call.src.prompt",
+        "documentation": {}
+    },
+    {
+        "label": "generate_shelter_prompt",
+        "kind": 2,
+        "importPath": "services.call.src.prompt",
+        "description": "services.call.src.prompt",
+        "peekOfCode": "def generate_shelter_prompt(\n    cbo_name: str,\n    church_name: str,\n    services_offered: List[CommunityServices]\n) -> str:\n    \"\"\"\n    Generate a shelter call prompt with the provided parameters.\n    Args:\n        cbo_name: Name of the community-based organization\n        church_name: Name of the church",
+        "detail": "services.call.src.prompt",
+        "documentation": {}
+    },
+    {
+        "label": "CommunityService",
+        "kind": 5,
+        "importPath": "services.call.src.prompt",
+        "description": "services.call.src.prompt",
+        "peekOfCode": "CommunityService = Literal[\n    'resources for the disabled',\n    'resources for the unemployed',\n    'food resources',\n    'clothing and hygiene resources',\n    'transportation resources',\n    'mental health resources',\n    'assistance with domestic violence',\n    'education assistance',\n    'financial assistance',",
+        "detail": "services.call.src.prompt",
+        "documentation": {}
+    },
+    {
+        "label": "SHELTER_PROMPT_TEMPLATE",
+        "kind": 5,
+        "importPath": "services.call.src.prompt",
+        "description": "services.call.src.prompt",
+        "peekOfCode": "SHELTER_PROMPT_TEMPLATE = \"\"\"You are calling {cbo_name} as a church volunteer for {church_name} to gather information about shelter availability and services. Keep your interactions brief, polite, and focused.\nKnown services at {cbo_name}: {services_offered}\nConversation Rules:\n1. Introduction: Keep it simple\n   - \"Hi, I'm [name] from [church]. We have people at our community dinner looking for shelter, and I'm calling to learn about your availability and process.\"\n2. Questions: Keep them short and direct\n   - Focus on one topic at a time\n   - Listen for answers without interrupting\n   - Follow up naturally on important details\n   - Avoid over-explaining why you're asking each question",
+        "detail": "services.call.src.prompt",
+        "documentation": {}
+    },
+    {
+        "label": "DEFAULT_API_URL",
+        "kind": 5,
+        "importPath": "services.call.src.runner",
+        "description": "services.call.src.runner",
+        "peekOfCode": "DEFAULT_API_URL = \"https://api.daily.co/v1\"\nTOKEN_EXPIRY_TIME = 60 * 60  # 1 hour in seconds\nasync def configure(aiohttp_session: aiohttp.ClientSession) -> Tuple[str, str]:\n    \"\"\"\n    Configure the Daily room and authentication settings.\n    Args:\n        aiohttp_session: Active aiohttp client session\n    Returns:\n        Tuple containing (room_url, token)\n    Raises:",
+        "detail": "services.call.src.runner",
+        "documentation": {}
+    },
+    {
+        "label": "TOKEN_EXPIRY_TIME",
+        "kind": 5,
+        "importPath": "services.call.src.runner",
+        "description": "services.call.src.runner",
+        "peekOfCode": "TOKEN_EXPIRY_TIME = 60 * 60  # 1 hour in seconds\nasync def configure(aiohttp_session: aiohttp.ClientSession) -> Tuple[str, str]:\n    \"\"\"\n    Configure the Daily room and authentication settings.\n    Args:\n        aiohttp_session: Active aiohttp client session\n    Returns:\n        Tuple containing (room_url, token)\n    Raises:\n        Exception: If required configuration is missing",
+        "detail": "services.call.src.runner",
+        "documentation": {}
+    },
+    {
+        "label": "configure_logging",
+        "kind": 2,
+        "importPath": "services.call.src.server",
+        "description": "services.call.src.server",
+        "peekOfCode": "def configure_logging():\n    if not logger._core.handlers:\n        logger.add(\n            sys.stderr,\n            format=\"<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level}</level> | {message}\",\n            level=\"DEBUG\",\n        )\n# Constants\nMAX_BOTS_PER_ROOM = 1\nDEFAULT_HOST = os.getenv(\"HOST\", \"127.0.0.1\")",
+        "detail": "services.call.src.server",
+        "documentation": {}
+    },
+    {
+        "label": "cleanup",
+        "kind": 2,
+        "importPath": "services.call.src.server",
+        "description": "services.call.src.server",
+        "peekOfCode": "def cleanup() -> None:\n    # Clean up function to terminate all bot processes\n    logger.info(\"🧹 Starting cleanup of bot processes\")\n    for pid, (proc, room_url) in bot_procs.items():\n        try:\n            proc.terminate()\n            proc.wait(timeout=5)  # Wait up to 5 seconds for graceful termination\n            logger.info(f\"✅ Successfully terminated bot {pid} in room {room_url}\")\n        except subprocess.TimeoutExpired:\n            logger.warning(f\"⚠️ Bot {pid} didn't terminate gracefully, forcing...\")",
+        "detail": "services.call.src.server",
+        "documentation": {}
+    },
+    {
+        "label": "MAX_BOTS_PER_ROOM",
+        "kind": 5,
+        "importPath": "services.call.src.server",
+        "description": "services.call.src.server",
+        "peekOfCode": "MAX_BOTS_PER_ROOM = 1\nDEFAULT_HOST = os.getenv(\"HOST\", \"127.0.0.1\")\nDEFAULT_PORT = int(os.getenv(\"FAST_API_PORT\", \"7860\"))\nDAILY_API_URL = os.getenv(\"DAILY_API_URL\", \"https://api.daily.co/v1\")\nTOKEN_EXPIRY_TIME = 60 * 60  # 1 hour in seconds\n# Type definitions\nBotProcess = Tuple[subprocess.Popen, str]  # (process, room_url)\nbot_procs: Dict[int, BotProcess] = {}\ndaily_helpers: Dict[str, DailyRESTHelper] = {}\n# Load environment variables",
+        "detail": "services.call.src.server",
+        "documentation": {}
+    },
+    {
+        "label": "DEFAULT_HOST",
+        "kind": 5,
+        "importPath": "services.call.src.server",
+        "description": "services.call.src.server",
+        "peekOfCode": "DEFAULT_HOST = os.getenv(\"HOST\", \"127.0.0.1\")\nDEFAULT_PORT = int(os.getenv(\"FAST_API_PORT\", \"7860\"))\nDAILY_API_URL = os.getenv(\"DAILY_API_URL\", \"https://api.daily.co/v1\")\nTOKEN_EXPIRY_TIME = 60 * 60  # 1 hour in seconds\n# Type definitions\nBotProcess = Tuple[subprocess.Popen, str]  # (process, room_url)\nbot_procs: Dict[int, BotProcess] = {}\ndaily_helpers: Dict[str, DailyRESTHelper] = {}\n# Load environment variables\nload_dotenv(override=True)",
+        "detail": "services.call.src.server",
+        "documentation": {}
+    },
+    {
+        "label": "DEFAULT_PORT",
+        "kind": 5,
+        "importPath": "services.call.src.server",
+        "description": "services.call.src.server",
+        "peekOfCode": "DEFAULT_PORT = int(os.getenv(\"FAST_API_PORT\", \"7860\"))\nDAILY_API_URL = os.getenv(\"DAILY_API_URL\", \"https://api.daily.co/v1\")\nTOKEN_EXPIRY_TIME = 60 * 60  # 1 hour in seconds\n# Type definitions\nBotProcess = Tuple[subprocess.Popen, str]  # (process, room_url)\nbot_procs: Dict[int, BotProcess] = {}\ndaily_helpers: Dict[str, DailyRESTHelper] = {}\n# Load environment variables\nload_dotenv(override=True)\ndef cleanup() -> None:",
+        "detail": "services.call.src.server",
+        "documentation": {}
+    },
+    {
+        "label": "DAILY_API_URL",
+        "kind": 5,
+        "importPath": "services.call.src.server",
+        "description": "services.call.src.server",
+        "peekOfCode": "DAILY_API_URL = os.getenv(\"DAILY_API_URL\", \"https://api.daily.co/v1\")\nTOKEN_EXPIRY_TIME = 60 * 60  # 1 hour in seconds\n# Type definitions\nBotProcess = Tuple[subprocess.Popen, str]  # (process, room_url)\nbot_procs: Dict[int, BotProcess] = {}\ndaily_helpers: Dict[str, DailyRESTHelper] = {}\n# Load environment variables\nload_dotenv(override=True)\ndef cleanup() -> None:\n    # Clean up function to terminate all bot processes",
+        "detail": "services.call.src.server",
+        "documentation": {}
+    },
+    {
+        "label": "TOKEN_EXPIRY_TIME",
+        "kind": 5,
+        "importPath": "services.call.src.server",
+        "description": "services.call.src.server",
+        "peekOfCode": "TOKEN_EXPIRY_TIME = 60 * 60  # 1 hour in seconds\n# Type definitions\nBotProcess = Tuple[subprocess.Popen, str]  # (process, room_url)\nbot_procs: Dict[int, BotProcess] = {}\ndaily_helpers: Dict[str, DailyRESTHelper] = {}\n# Load environment variables\nload_dotenv(override=True)\ndef cleanup() -> None:\n    # Clean up function to terminate all bot processes\n    logger.info(\"🧹 Starting cleanup of bot processes\")",
+        "detail": "services.call.src.server",
+        "documentation": {}
+    },
+    {
+        "label": "BotProcess",
+        "kind": 5,
+        "importPath": "services.call.src.server",
+        "description": "services.call.src.server",
+        "peekOfCode": "BotProcess = Tuple[subprocess.Popen, str]  # (process, room_url)\nbot_procs: Dict[int, BotProcess] = {}\ndaily_helpers: Dict[str, DailyRESTHelper] = {}\n# Load environment variables\nload_dotenv(override=True)\ndef cleanup() -> None:\n    # Clean up function to terminate all bot processes\n    logger.info(\"🧹 Starting cleanup of bot processes\")\n    for pid, (proc, room_url) in bot_procs.items():\n        try:",
+        "detail": "services.call.src.server",
+        "documentation": {}
+    },
+    {
+        "label": "app",
+        "kind": 5,
+        "importPath": "services.call.src.server",
+        "description": "services.call.src.server",
+        "peekOfCode": "app = FastAPI(lifespan=lifespan)\n# Configure CORS\napp.add_middleware(\n    CORSMiddleware,\n    allow_origins=[\"*\"],\n    allow_credentials=True,\n    allow_methods=[\"*\"],\n    allow_headers=[\"*\"],\n)\n# Store active processes and their communication queues, keyed by room_url",
+        "detail": "services.call.src.server",
+        "documentation": {}
+    },
+    {
+        "label": "process_manager",
+        "kind": 5,
+        "importPath": "services.call.src.server",
+        "description": "services.call.src.server",
+        "peekOfCode": "process_manager = {\n    \"processes\": {},  # type: Dict[str, asyncio.subprocess.Process]\n    \"queues\": {},    # type: Dict[str, asyncio.Queue]\n    \"variables\": {},  # type: Dict[str, dict]\n    \"call_ids\": {}   # type: Dict[str, str] # Maps room_url to callId\n}\n# Dial-in Configuration\nparams = DailyRoomParams(\n    properties=DailyRoomProperties(\n        sip=DailyRoomSipParams(",
+        "detail": "services.call.src.server",
+        "documentation": {}
+    },
+    {
+        "label": "params",
+        "kind": 5,
+        "importPath": "services.call.src.server",
+        "description": "services.call.src.server",
+        "peekOfCode": "params = DailyRoomParams(\n    properties=DailyRoomProperties(\n        sip=DailyRoomSipParams(\n            display_name=\"sip-dialin\",\n            video = False,\n            sip_mode = \"dial-in\",\n            num_endpoints = 1\n        )\n    )\n)",
+        "detail": "services.call.src.server",
+        "documentation": {}
+    }
+]

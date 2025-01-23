@@ -68,28 +68,29 @@ func GenerateServicesPrompt(organization_id string, transcript string) (string, 
 		servicesText = servicesList.String()
 	}
 
-	prompt := fmt.Sprintf(`You are a service data extraction specialist that documents details about human services available to the underprivileged in your community. Your task is to identify and structure information about new services mentioned in a conversation transcript, not currently known for %s. You have been provided with both the transcript and services that are currently documented for %s, the organization that was called to generate the transcript.
+	prompt := fmt.Sprintf(`You are a service data extraction specialist that documents details about human services available in your community. Your task is to identify and structure information about new services mentioned in a conversation transcript for %s.
 
 Transcript:
 %s
 
-Services that were previously documented as being offered by %s:
+Previously documented services for %s:
 %s
 
-Your task is to extract detailed information about each new service mentioned and structure it according to the provided schema. For each service:
-1. Create a complete service entry with all required fields (name, status, description)
-2. Include any optional fields that were explicitly mentioned or can be easily inferred in the transcript. Do not invent details that are not implied.
-3. Use clear, objective language for descriptions
-4. Don't worry about capturing scheduling details or capacity information about each service, that will be captured in another table
-5. If you aren't confident that the service mentioned in the call was already documented by 
+IMPORTANT EXTRACTION RULES:
+1. Break down composite services into their individual components. For example:
+   - If "counseling services" includes both "group counseling" and "individual counseling", create separate entries for each
+   - If a program has different delivery methods (in-person vs online), create separate entries
+   - Each distinct service should stand alone with its own eligibility, fees, and application process
 
-Guidelines for extraction:
-- If multiple similar services are mentioned (e.g., different medical services), create separate entries for each distinct service
-- Default service status to "active" unless otherwise indicated
-- Extract any eligibility requirements or application processes mentioned
-- Capture specific details about fees (if the service is free state "Free" and nothing else)
+2. For each individual service:
+   - Name it specifically (e.g., "Brain Trauma Individual Coaching" instead of just "Brain Trauma Services")
+   - Include only confirmed details from the transcript
+   - Default status to "active" unless otherwise indicated
+   - Keep descriptions focused on that specific service only
 
-IMPORTANT: You must ONLY respond by using the new_services tool to output the structured data. Do not provide any explanatory text, confirmations, or additional messages. Simply use the tool to output the structured data following the schema exactly.`, orgName, orgName, transcript, orgName, servicesText)
+3. Do NOT combine multiple services into a single entry, even if they serve similar populations
+
+Only respond using the new_services tool to output the structured data. Do not provide any additional text.`, orgName, transcript, orgName, servicesText)
 
 	return prompt, ServicesSchema, nil
 }
@@ -103,11 +104,6 @@ var ServicesSchema = inference.ToolInputSchema{
 			Items: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
-					// Handled Manually
-					// "organization_id": map[string]interface{}{
-					// 	"type":        "string",
-					// 	"description": "UUID v4 of the organization offering the service",
-					// },
 					"name": map[string]interface{}{
 						"type":        "string",
 						"description": "Primary name of the service",
@@ -117,30 +113,9 @@ var ServicesSchema = inference.ToolInputSchema{
 						"description": "Current operational status of the service",
 						"enum":        []string{"active", "inactive", "defunct"},
 					},
-					// Handled Manually
-					// "program_id": map[string]interface{}{
-					// 	"type":        "string",
-					// 	"description": "Optional UUID v4 of the program this service belongs to",
-					// },
-					"alternate_name": map[string]interface{}{
-						"type":        "string",
-						"description": "Alternative name or abbreviation for the service",
-					},
 					"description": map[string]interface{}{
 						"type":        "string",
 						"description": "Detailed description of what the service provides",
-					},
-					"url": map[string]interface{}{
-						"type":        "string",
-						"description": "Website or webpage for the service",
-					},
-					"email": map[string]interface{}{
-						"type":        "string",
-						"description": "Contact email for the service",
-					},
-					"interpretation_services": map[string]interface{}{
-						"type":        "string",
-						"description": "Languages and interpretation services available",
 					},
 					"application_process": map[string]interface{}{
 						"type":        "string",
@@ -150,25 +125,9 @@ var ServicesSchema = inference.ToolInputSchema{
 						"type":        "string",
 						"description": "Detailed description of any fees or costs",
 					},
-					"accreditations": map[string]interface{}{
-						"type":        "string",
-						"description": "Any professional accreditations or certifications",
-					},
 					"eligibility_description": map[string]interface{}{
 						"type":        "string",
 						"description": "Who is eligible to receive this service",
-					},
-					"minimum_age": map[string]interface{}{
-						"type":        "number",
-						"description": "Minimum age requirement for service recipients",
-					},
-					"maximum_age": map[string]interface{}{
-						"type":        "number",
-						"description": "Maximum age limit for service recipients",
-					},
-					"alert": map[string]interface{}{
-						"type":        "string",
-						"description": "Important notices or warnings about the service",
 					},
 				},
 				"required": []string{"name", "status", "description"},

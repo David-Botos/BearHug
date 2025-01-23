@@ -109,25 +109,24 @@ var ServicesSchema = inference.ToolInputSchema{
 						"description": "Primary name of the service",
 					},
 					"status": map[string]interface{}{
-						"type":        "string",
-						"description": "Current operational status of the service",
-						"enum":        []string{"active", "inactive", "defunct"},
+						"type": "string",
+						"enum": []string{"active", "inactive", "defunct"},
 					},
 					"description": map[string]interface{}{
-						"type":        "string",
-						"description": "Detailed description of what the service provides",
+						"type": "string",
 					},
 					"application_process": map[string]interface{}{
-						"type":        "string",
-						"description": "Steps required to apply for or access the service",
+						"type": "string",
 					},
 					"fees_description": map[string]interface{}{
-						"type":        "string",
-						"description": "Detailed description of any fees or costs",
+						"type": "string",
 					},
 					"eligibility_description": map[string]interface{}{
+						"type": "string",
+					},
+					"wait_time": map[string]interface{}{
 						"type":        "string",
-						"description": "Who is eligible to receive this service",
+						"description": "Current wait time for service access",
 					},
 				},
 				"required": []string{"name", "status", "description"},
@@ -155,6 +154,7 @@ type ExtractedService struct {
 	MinimumAge             *float64 `json:"minimum_age,omitempty"`
 	MaximumAge             *float64 `json:"maximum_age,omitempty"`
 	Alert                  *string  `json:"alert,omitempty"`
+	WaitTime               *string  `json:"wait_time,omitempty"`
 }
 type ServicesExtracted struct {
 	NewServices []ExtractedService `json:"new_services"`
@@ -225,43 +225,23 @@ func HandleExtractedServices(extractedServices ServicesExtracted, organizationID
 
 	verificationResults, err := VerifyServiceUniqueness(extractedServices, organizationID)
 	if err != nil {
-		log.Error().
-			Err(err).
-			Str("organization_id", organizationID).
-			Msg("Failed to verify service uniqueness")
 		return ServiceContext{}, fmt.Errorf("failed to verify service uniqueness: %w", err)
 	}
-
-	log.Debug().
-		Int("new_services", len(verificationResults.NewServices)).
-		Int("update_services", len(verificationResults.UpdateServices)).
-		Int("unchanged_services", len(verificationResults.UnchangedServices)).
-		Msg("Service verification completed")
 
 	serviceContext := ServiceContext{
 		ExistingServices: make([]*hsds_types.Service, 0),
 		NewServices:      make([]*hsds_types.Service, 0),
 	}
 
-	// Convert new services to proper HSDS format
+	// Convert new services to HSDS format
 	if len(verificationResults.NewServices) > 0 {
 		for _, extractedService := range verificationResults.NewServices {
-			log.Debug().
-				Str("service_name", extractedService.Name).
-				Msg("Processing new service")
 			opts := &hsds_types.ServiceOptions{
-				AlternateName:          extractedService.AlternateName,
 				Description:            &extractedService.Description,
-				URL:                    extractedService.URL,
-				Email:                  extractedService.Email,
-				InterpretationServices: extractedService.InterpretationServices,
 				ApplicationProcess:     extractedService.ApplicationProcess,
 				FeesDescription:        extractedService.FeesDescription,
-				Accreditations:         extractedService.Accreditations,
 				EligibilityDescription: extractedService.EligibilityDescription,
-				MinimumAge:             extractedService.MinimumAge,
-				MaximumAge:             extractedService.MaximumAge,
-				Alert:                  extractedService.Alert,
+				WaitTime:               extractedService.WaitTime,
 			}
 
 			service, err := hsds_types.NewService(
@@ -279,24 +259,11 @@ func HandleExtractedServices(extractedServices ServicesExtracted, organizationID
 				OrganizationID:         service.OrganizationID,
 				Name:                   service.Name,
 				Status:                 service.Status,
-				ProgramID:              service.ProgramID,
-				AlternateName:          service.AlternateName,
 				Description:            service.Description,
-				URL:                    service.URL,
-				Email:                  service.Email,
-				InterpretationServices: service.InterpretationServices,
 				ApplicationProcess:     service.ApplicationProcess,
 				FeesDescription:        service.FeesDescription,
 				EligibilityDescription: service.EligibilityDescription,
-				MinimumAge:             service.MinimumAge,
-				MaximumAge:             service.MaximumAge,
-				Alert:                  service.Alert,
 				WaitTime:               service.WaitTime,
-				Fees:                   service.Fees,
-				Licenses:               service.Licenses,
-				Accreditations:         service.Accreditations,
-				AssuredDate:            service.AssuredDate,
-				AssurerEmail:           service.AssurerEmail,
 				LastModified:           service.LastModified,
 				CreatedAt:              service.CreatedAt,
 				UpdatedAt:              service.UpdatedAt,
@@ -304,53 +271,22 @@ func HandleExtractedServices(extractedServices ServicesExtracted, organizationID
 			serviceContext.NewServices = append(serviceContext.NewServices, hsdsService)
 		}
 
-		// Store the new services
 		if err := supabase.StoreNewServices(serviceContext.NewServices, callID); err != nil {
-			log.Error().
-				Err(err).
-				Int("services_count", len(serviceContext.NewServices)).
-				Msg("Failed to store new services")
 			return ServiceContext{}, fmt.Errorf("failed to store new services: %w", err)
 		}
-
-		log.Info().
-			Int("stored_services_count", len(serviceContext.NewServices)).
-			Msg("Successfully stored new services")
 	}
 
-	// Handle updates to existing services
+	// Handle existing service updates
 	if len(verificationResults.UpdateServices) > 0 {
 		if err := UpdateExistingServices(verificationResults.UpdateServices, callID); err != nil {
-			log.Error().
-				Err(err).
-				Int("update_count", len(verificationResults.UpdateServices)).
-				Msg("Failed to update existing services")
 			return ServiceContext{}, fmt.Errorf("failed to update existing services: %w", err)
 		}
-
-		// Add updated services to ExistingServices in serviceContext
 		for _, updatedService := range verificationResults.UpdateServices {
 			serviceContext.ExistingServices = append(serviceContext.ExistingServices, updatedService.ExistingService)
 		}
-
-		log.Info().
-			Int("updated_services_count", len(verificationResults.UpdateServices)).
-			Msg("Successfully updated existing services")
 	}
 
-	// Add unchanged services to ExistingServices in serviceContext
-	if len(verificationResults.UnchangedServices) > 0 {
-		serviceContext.ExistingServices = append(serviceContext.ExistingServices, verificationResults.UnchangedServices...)
-
-		log.Debug().
-			Int("unchanged_services_count", len(verificationResults.UnchangedServices)).
-			Msg("Added unchanged services to service context")
-	}
-
-	log.Info().
-		Int("new_services", len(serviceContext.NewServices)).
-		Int("existing_services", len(serviceContext.ExistingServices)).
-		Msg("Service context preparation completed")
+	serviceContext.ExistingServices = append(serviceContext.ExistingServices, verificationResults.UnchangedServices...)
 
 	return serviceContext, nil
 }

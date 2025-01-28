@@ -9,19 +9,46 @@ type DailyRequestBody struct {
 	Config          []ConfigItem           `json:"config"`
 	APIKeys         map[string]string      `json:"api_keys"`
 	RecordSettings  RecordingSettings      `json:"recording_settings"`
-	DialoutSettings DialoutSettings        `json:"dialout_settings"`
+	DialoutSettings []DialoutSettings      `json:"dialout_settings"`
 	DialinSettings  DialinSettings         `json:"dialin_settings"`
 	WebhookTools    map[string]interface{} `json:"webhook_tools"`
 }
 
+type Deepgram struct {
+	Dictation       bool   `json:"dictation,omitempty"`
+	FillerWords     bool   `json:"filler_words,omitempty"`
+	Numerals        bool   `json:"numerals,omitempty"`
+	ProfanityFilter bool   `json:"profanity_filter,omitempty"`
+	Punctuate       bool   `json:"punctuate,omitempty"`
+	Keywords        string `json:"keywords,omitempty"`
+	Redact          string `json:"redact,omitempty"`
+	Replace         string `json:"replace,omitempty"`
+}
+
+type Anthropic struct {
+	Model string `json:"model,omitempty"`
+}
+
+type Together struct {
+	Model string `json:"model,omitempty"`
+}
+
+type Cartesia struct {
+	Voice      string `json:"voice,omitempty"`
+	SampleRate int    `json:"sample_rate,omitempty"`
+}
+
 type ServiceOptions struct {
-	GeminiLive struct {
-		Voice string `json:"voice"`
-	} `json:"gemini_live"`
+	Deepgram Deepgram `json:"deepgram,omitempty"`
+	// Anthropic Anthropic `json:"anthropic,omitempty"`
+	Together Together `json:"together,omitempty"`
+	Cartesia Cartesia `json:"cartesia,omitempty"`
 }
 
 type Services struct {
+	STT string `json:"stt"`
 	LLM string `json:"llm"`
+	TTS string `json:"tts"`
 }
 
 type ConfigItem struct {
@@ -67,43 +94,122 @@ type RecordingConfig struct {
 	BucketRegion  string
 }
 
+type ServiceKeys struct {
+	STT string
+	LLM string
+	TTS string
+}
+
 // BuildRequestBody creates a request body for the Daily API with the given phone number and prompt
-func BuildRequestBody(phoneNumber, prompt, geminiApiKey string, recordingConfig RecordingConfig) (*DailyRequestBody, error) {
-	return &DailyRequestBody{
-		BotProfile:  "gemini_multimodal_live_2024_12",
-		MaxDuration: 300,
-		ServiceOptions: ServiceOptions{
-			GeminiLive: struct {
-				Voice string `json:"voice"`
-			}{
-				Voice: "Aoede",
+func BuildRequestBody(phoneNumber, prompt string, serviceKeys ServiceKeys, recordingConfig RecordingConfig) (*DailyRequestBody, error) {
+	// Initialize DAC Service Options concisely
+	DACServiceOptions := ServiceOptions{
+		Deepgram: Deepgram{
+			Dictation:       true,
+			FillerWords:     false,
+			Numerals:        true,
+			ProfanityFilter: true,
+			Punctuate:       true,
+		},
+		Together: Together{
+			Model: "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+		},
+		Cartesia: Cartesia{
+			Voice: "5345cf08-6f37-424d-a5d9-8ae1101b9377",
+		},
+	}
+
+	vadParams := map[string]interface{}{
+		"stop_secs": 0.5,
+	}
+
+	DACServiceConfig := []ConfigItem{
+		{
+			Service: "vad",
+			Options: []OptionItem{
+				{
+					Name:  "params",
+					Value: vadParams,
+				},
 			},
 		},
-		Services: Services{
-			LLM: "gemini_live",
+		{
+			Service: "stt",
+			Options: []OptionItem{
+				{
+					Name:  "model",
+					Value: "nova-2-phonecall",
+				},
+			},
 		},
-		Config: []ConfigItem{
-			{
-				Service: "llm",
-				Options: []OptionItem{
-					{
-						Name: "initial_messages",
-						Value: []Message{
-							{
-								Role:    "user",
-								Content: prompt,
-							},
+		{
+			Service: "llm",
+			Options: []OptionItem{
+				{
+					Name:  "model",
+					Value: "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+				},
+				// {
+				// 	Name:  "temperature",
+				// 	Value: 0.7,
+				// },
+				{
+					Name: "initial_messages",
+					Value: []Message{
+						{
+							Role:    "system",
+							Content: prompt,
+						},
+						{
+							Role:    "user",
+							Content: "Ok let's start the roleplay.  Begin speaking when I greet you:",
 						},
 					},
-					{
-						Name:  "run_on_config",
-						Value: true,
+				},
+				{Name: "run_on_config", Value: false},
+			},
+		},
+		{
+			Service: "tts",
+			Options: []OptionItem{
+				{
+					Name:  "voice",
+					Value: "5345cf08-6f37-424d-a5d9-8ae1101b9377",
+				},
+				{
+					Name:  "speed",
+					Value: "normal",
+				},
+				{
+					Name:  "emotion",
+					Value: []string{"positivity:high", "curiosity"},
+				},
+				{
+					Name: "text_filter",
+					Value: map[string]interface{}{
+						"enable_text_filter": true,
+						"filter_code":        true,
+						"filter_tables":      true,
 					},
 				},
 			},
 		},
+	}
+
+	return &DailyRequestBody{
+		BotProfile:     "voice_2024_10",
+		MaxDuration:    900,
+		ServiceOptions: DACServiceOptions,
+		Services: Services{
+			STT: "deepgram",
+			LLM: "together",
+			TTS: "cartesia",
+		},
+		Config: DACServiceConfig,
 		APIKeys: map[string]string{
-			"gemini_live": geminiApiKey,
+			"deepgram": serviceKeys.STT,
+			"together": serviceKeys.LLM,
+			"cartesia": serviceKeys.TTS,
 		},
 		RecordSettings: RecordingSettings{
 			Type: "cloud",
@@ -115,8 +221,8 @@ func BuildRequestBody(phoneNumber, prompt, geminiApiKey string, recordingConfig 
 				BucketRegion:             recordingConfig.BucketRegion,
 			},
 		},
-		DialoutSettings: DialoutSettings{
-			PhoneNumber: phoneNumber,
+		DialoutSettings: []DialoutSettings{
+			{PhoneNumber: phoneNumber},
 		},
 		WebhookTools: make(map[string]interface{}),
 	}, nil

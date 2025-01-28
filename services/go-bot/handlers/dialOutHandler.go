@@ -28,7 +28,10 @@ type ErrorResponse struct {
 func getRequiredEnvVars() (map[string]string, error) {
 	required := []string{
 		"DAILY_BOTS_KEY",
-		"GEMINI_API_KEY",
+		"DEEPGRAM_API_KEY",
+		// "ANTHROPIC_API_KEY",
+		"CARTESIA_API_KEY",
+		"TOGETHER_API_KEY",
 		"AWS_ASSUME_ROLE_ARN",
 		"AWS_BUCKET_NAME",
 		"AWS_BUCKET_REGION",
@@ -95,6 +98,13 @@ func DialOutHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Create service keys config
+	serviceKeys := config.ServiceKeys{
+		STT: envVars["DEEPGRAM_API_KEY"],
+		LLM: envVars["TOGETHER_API_KEY"],
+		TTS: envVars["CARTESIA_API_KEY"],
+	}
+
 	// Create recording config
 	recordingConfig := config.RecordingConfig{
 		AssumeRoleARN: envVars["AWS_ASSUME_ROLE_ARN"],
@@ -103,14 +113,22 @@ func DialOutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build Daily API request body
-	dailyReqBody, err := config.BuildRequestBody(reqBody.PhoneNumber, generatedPrompt, envVars["GEMINI_API_KEY"], recordingConfig)
+	dailyReqBody, err := config.BuildRequestBody(reqBody.PhoneNumber, generatedPrompt, serviceKeys, recordingConfig)
 	if err != nil {
 		log.Printf("Error building Daily request body: %v", err)
 		sendErrorResponse(w, "Failed to construct Daily API request", http.StatusInternalServerError)
 		return
 	}
 
-	// Serialize payload to JSON
+	// Pretty print the request body for logging
+	prettyJSON, err := json.MarshalIndent(dailyReqBody, "", "    ")
+	if err != nil {
+		log.Printf("Error pretty printing request body: %v", err)
+	} else {
+		log.Printf("Daily API Request Body:\n%s", string(prettyJSON))
+	}
+
+	// Serialize payload for the actual request (using regular json.Marshal)
 	dailyPayload, err := json.Marshal(dailyReqBody)
 	if err != nil {
 		log.Printf("Error serializing payload: %v", err)

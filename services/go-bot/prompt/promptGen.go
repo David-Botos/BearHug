@@ -10,18 +10,18 @@ type ServiceCategory string
 
 // Define constants for each service category
 const (
-	DisabledResources     ServiceCategory = "resources for the disabled"
-	UnemploymentResources ServiceCategory = "resources for the unemployed"
-	FoodResources         ServiceCategory = "food resources"
-	ClothingHygiene       ServiceCategory = "clothing and hygiene resources"
-	Transportation        ServiceCategory = "transportation resources"
-	MentalHealth          ServiceCategory = "mental health resources"
-	DomesticViolence      ServiceCategory = "assistance with domestic violence"
-	Education             ServiceCategory = "education assistance"
-	Financial             ServiceCategory = "financial assistance"
-	Healthcare            ServiceCategory = "health care resources"
-	Shelter               ServiceCategory = "shelter or housing"
-	BrainInjury           ServiceCategory = "assistance with traumatic brain injuries"
+	DisabledResources     ServiceCategory = "DisabledResources"
+	UnemploymentResources ServiceCategory = "UnemploymentResources"
+	FoodResources         ServiceCategory = "FoodResources"
+	ClothingHygiene       ServiceCategory = "ClothingHygiene"
+	Transportation        ServiceCategory = "Transportation"
+	MentalHealth          ServiceCategory = "MentalHealth"
+	DomesticViolence      ServiceCategory = "DomesticViolence"
+	Education             ServiceCategory = "Education"
+	Financial             ServiceCategory = "Financial"
+	Healthcare            ServiceCategory = "Healthcare"
+	Shelter               ServiceCategory = "Shelter"
+	BrainInjury           ServiceCategory = "BrainInjury"
 )
 
 // ServiceCategories represents a set of selected service categories
@@ -42,31 +42,28 @@ func GenPrompt(cboName string, serviceCategories ServiceCategories) (string, err
 		}
 	}
 
-	// Format service categories for natural language
 	serviceList := formatServiceList(serviceCategories)
 
-	prompt := fmt.Sprintf(`Hello! I am an AI assistant working with 211 to update our resource directory. I am calling specifically about %s and your services related to %s.
+	prompt := fmt.Sprintf(`You are Alex, a Two One One resource directory specialist focused on %s. Speak naturally and professionally.
 
-I will be asking a few questions about your organizations services to help connect people in need with the right resources. This call should take about 5-7 minutes. Is this a good time to talk?
+When the call connects, say exactly:
+"Hello! I'm Alex from Two One One's resource directory. I'm calling to update our information about %s so we can connect people with your services more effectively. This will take about 5 to 7 minutes. Is now a good time?"
 
-For each service, I need to gather:
-- Current availability and capacity
-- Eligibility requirements
-- Application process
-- Any fees or costs
-- Schedule and hours of operation
-- How often your capacity changes
+If they agree, ask:
+"Thank you! Our records show you provide %s. Could you confirm which of these services you currently offer?"
 
-I understand you provide assistance with %s. Could you tell me about your current capacity and availability for these services?
+For each confirmed service, ask these questions in order:
+"What's your current availability?"
+"Who is eligible for this service?"
+"What's the application process?"
+"What are your hours of operation?"
 
-Please know that:
-1. I am an AI assistant working to help 211 maintain accurate resource information
-2. All information will be used to help connect people in need with available services
-3. I will keep our conversation focused and respect your time
+End with:
+"Thank you so much for your time today. This will help us better serve the community."
 
-Your responses will help us direct people to the right resources when they are in need. I will adapt my questions based on your answers and keep everything brief and clear.`,
-		cboName,
+Listen carefully and ask for clarification if needed. Keep responses brief and conversational.`,
 		serviceList,
+		cboName,
 		serviceList)
 
 	return prompt, nil
@@ -84,15 +81,46 @@ func isValidCategory(category ServiceCategory) bool {
 	return false
 }
 
+func (sc ServiceCategory) DisplayName() string {
+	switch sc {
+	case DisabledResources:
+		return "resources for the disabled"
+	case UnemploymentResources:
+		return "resources for the unemployed"
+	case FoodResources:
+		return "food resources"
+	case ClothingHygiene:
+		return "clothing and hygiene resources"
+	case Transportation:
+		return "transportation resources"
+	case MentalHealth:
+		return "mental health resources"
+	case DomesticViolence:
+		return "assistance with domestic violence"
+	case Education:
+		return "education assistance"
+	case Financial:
+		return "financial assistance"
+	case Healthcare:
+		return "health care resources"
+	case Shelter:
+		return "shelter or housing"
+	case BrainInjury:
+		return "assistance with traumatic brain injuries"
+	default:
+		return string(sc)
+	}
+}
+
 // formatServiceList creates a grammatically correct list of services
 func formatServiceList(categories ServiceCategories) string {
 	if len(categories) == 0 {
-		return ""
+		return "No service category data exists for this organization"
 	}
 
 	var categoryStrings []string
 	for _, cat := range categories {
-		categoryStrings = append(categoryStrings, string(cat))
+		categoryStrings = append(categoryStrings, cat.DisplayName())
 	}
 
 	if len(categoryStrings) == 1 {

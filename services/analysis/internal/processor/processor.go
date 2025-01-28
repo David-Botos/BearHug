@@ -48,49 +48,52 @@ func ProcessTranscript(params types.ProcTranscriptParams) (bool, error) {
 	}
 
 	///* --- Conduct Triaged Analyses for Details --- *///
-	log.Debug().Msg("Starting detail extraction from triaged analysis")
-	extractedDetails, detailExtractionErr := structOutputs.HandleTriagedAnalysis(
-		params.Transcript,
-		identifiedDetailTypes,
-		serviceCtx,
-	)
-	if detailExtractionErr != nil {
-		log.Error().
-			Err(detailExtractionErr).
-			Msg("Failed to extract details from triaged analysis")
-		return false, fmt.Errorf("error extracting details: %w", detailExtractionErr)
-	}
+	if len(identifiedDetailTypes.DetectedCategories) > 0 {
+		log.Debug().Msg("Starting detail extraction from triaged analysis")
+		extractedDetails, detailExtractionErr := structOutputs.HandleTriagedAnalysis(
+			params.Transcript,
+			identifiedDetailTypes,
+			serviceCtx,
+		)
+		if detailExtractionErr != nil {
+			log.Error().
+				Err(detailExtractionErr).
+				Msg("Failed to extract details from triaged analysis")
+			return false, fmt.Errorf("error extracting details: %w", detailExtractionErr)
+		}
 
-	///* --- Validate the Entire Output --- *///
-	// log.Debug().
-	// 	Interface("extracted_details", extractedDetails).
-	// 	Msg("Starting validation of extracted information")
-	// validationResult, validatorErr := validation.ValidateExtractedInfo(extractedDetails, *serviceCtx, params.Transcript, params.CallID)
-	// if validatorErr != nil {
-	// 	log.Error().
-	// 		Err(validatorErr).
-	// 		Msg("Validation failed for extracted information")
-	// 	return false, fmt.Errorf("error when attempting to validate the information extracted from transcript: %w", validatorErr)
-	// }
+		///* --- Validate the Entire Output --- *///
+		// log.Debug().
+		// 	Interface("extracted_details", extractedDetails).
+		// 	Msg("Starting validation of extracted information")
+		// validationResult, validatorErr := validation.ValidateExtractedInfo(extractedDetails, *serviceCtx, params.Transcript, params.CallID)
+		// if validatorErr != nil {
+		// 	log.Error().
+		// 		Err(validatorErr).
+		// 		Msg("Validation failed for extracted information")
+		// 	return false, fmt.Errorf("error when attempting to validate the information extracted from transcript: %w", validatorErr)
+		// }
 
-	// if !validationResult {
-	// 	log.Error().Msg("Validation failed with unhandled error")
-	// 	return false, fmt.Errorf("validation failed with unhandled error")
-	// }
+		// if !validationResult {
+		// 	log.Error().Msg("Validation failed with unhandled error")
+		// 	return false, fmt.Errorf("validation failed with unhandled error")
+		// }
 
-	///* --- Store all the details --- *///
-	storageFailureErr := structOutputs.StoreDetails(extractedDetails, params.CallID)
-	if storageFailureErr != nil {
-		log.Error().
-			Err(storageFailureErr).
-			Msg("Failed to store all details")
-		return false, fmt.Errorf("error storing details: %w", storageFailureErr)
+		///* --- Store all the details --- *///
+		storageFailureErr := structOutputs.StoreDetails(extractedDetails, params.CallID)
+		if storageFailureErr != nil {
+			log.Error().
+				Err(storageFailureErr).
+				Msg("Failed to store all details")
+			return false, fmt.Errorf("error storing details: %w", storageFailureErr)
+		}
 	}
 
 	// TODO: update this to log the complete extraction details
-	log.Info().
-		Str("organization_id", params.OrganizationID).
-		Msg("Successfully completed transcript processing")
+	// log.Info().
+	// 	Str("organization_id", params.OrganizationID).
+	// 	Msg("Successfully completed transcript processing")
 
+	log.Info().Msg("it worked yipeeeeee 🎉🥳")
 	return true, nil
 }

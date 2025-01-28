@@ -29,11 +29,6 @@ func HandleTriagedAnalysis(
 		Str("transcript_length", fmt.Sprint(len(transcript))).
 		Msg("Starting triage analysis")
 
-	if identifiedDetails == nil || len(identifiedDetails.DetectedCategories) == 0 {
-		log.Error().Msg("No categories detected in response")
-		return nil, fmt.Errorf("no categories detected in response")
-	}
-
 	detectedCategories := identifiedDetails.DetectedCategories
 	log.Info().
 		Interface("categories", detectedCategories).

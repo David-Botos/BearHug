@@ -7,10 +7,9 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 
+	env "github.com/david-botos/BearHug/services/analysis/pkg/ENV"
 	"github.com/david-botos/BearHug/services/analysis/pkg/logger"
-	"github.com/joho/godotenv"
 )
 
 type PromptParams struct {
@@ -85,16 +84,9 @@ func InitInferenceClient() (*ClaudeClient, error) {
 	log := logger.Get()
 	log.Debug().Msg("Initializing Claude inference client")
 
-	if os.Getenv("ENVIRONMENT") == "development" {
-		workingDir, err := os.Getwd()
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to get working directory")
-			return nil, fmt.Errorf("failed to get working directory: %w", err)
-		}
-		if err := godotenv.Load(filepath.Join(workingDir, ".env")); err != nil {
-			log.Error().Err(err).Msg("Failed to load environment file")
-			return nil, fmt.Errorf("failed to load env file: %w", err)
-		}
+	if err := env.LoadEnvFile(); err != nil {
+		log.Error().Err(err).Msg("Failed to load development environment")
+		return nil, err
 	}
 
 	apiKey := os.Getenv("ANTHROPIC_API_KEY")
@@ -102,7 +94,6 @@ func InitInferenceClient() (*ClaudeClient, error) {
 		log.Error().Msg("ANTHROPIC_API_KEY not found in environment")
 		return nil, fmt.Errorf("ANTHROPIC_API_KEY not found in environment")
 	}
-
 	return NewClient(apiKey), nil
 }
 
@@ -201,11 +192,7 @@ func (c *ClaudeClient) RunClaudeInference(params PromptParams) (map[string]inter
 		Msg("Successfully parsed inference response")
 
 	var toolOutput interface{}
-	for i, content := range inferenceResp.Content {
-		log.Debug().
-			Int("index", i).
-			Str("content_type", content.Type).
-			Msg("Processing response content")
+	for _, content := range inferenceResp.Content {
 
 		if content.Type == "tool_use" {
 			toolOutput = content.Input

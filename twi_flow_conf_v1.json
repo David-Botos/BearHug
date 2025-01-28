@@ -1,0 +1,355 @@
+{
+  "description": "A New Flow",
+  "states": [
+    {
+      "name": "Trigger",
+      "type": "trigger",
+      "transitions": [
+        {
+          "event": "incomingMessage"
+        },
+        {
+          "next": "FetchCallerAndOrgName",
+          "event": "incomingCall"
+        },
+        {
+          "event": "incomingConversationMessage"
+        },
+        {
+          "event": "incomingRequest"
+        },
+        {
+          "event": "incomingParent"
+        }
+      ],
+      "properties": {
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "Greeting",
+      "type": "gather-input-on-call",
+      "transitions": [
+        {
+          "event": "keypress"
+        },
+        {
+          "next": "SetStatedOrgName",
+          "event": "speech"
+        },
+        {
+          "next": "Greeting",
+          "event": "timeout"
+        }
+      ],
+      "properties": {
+        "voice": "default",
+        "speech_timeout": "auto",
+        "offset": {
+          "x": -180,
+          "y": 700
+        },
+        "loop": 3,
+        "hints": "{organization_name}",
+        "finish_on_key": "#",
+        "say": "Welcome to the Two One One Update Service, {{flow.variables.caller_name}}.  Please state the name of the organization you are calling to update.",
+        "language": "en-US",
+        "stop_gather": false,
+        "gather_language": "en-US",
+        "profanity_filter": "true",
+        "timeout": 5
+      }
+    },
+    {
+      "name": "NameFail_Greeting",
+      "type": "gather-input-on-call",
+      "transitions": [
+        {
+          "event": "keypress"
+        },
+        {
+          "next": "SetStatedOrgName",
+          "event": "speech"
+        },
+        {
+          "next": "NameFail_Greeting",
+          "event": "timeout"
+        }
+      ],
+      "properties": {
+        "voice": "default",
+        "speech_timeout": "auto",
+        "offset": {
+          "x": 400,
+          "y": 410
+        },
+        "loop": 3,
+        "hints": "{organization_name}",
+        "finish_on_key": "#",
+        "say": "Welcome to the Two One One Update Service.  Please state the name of the organization you are calling to update.",
+        "language": "en-US",
+        "stop_gather": false,
+        "gather_language": "en-US",
+        "profanity_filter": "true",
+        "timeout": 5
+      }
+    },
+    {
+      "name": "UnconfirmedOrganization",
+      "type": "gather-input-on-call",
+      "transitions": [
+        {
+          "event": "keypress"
+        },
+        {
+          "next": "ResetStatedOrgName",
+          "event": "speech"
+        },
+        {
+          "next": "DidNotHear",
+          "event": "timeout"
+        }
+      ],
+      "properties": {
+        "voice": "default",
+        "offset": {
+          "x": 260,
+          "y": 1510
+        },
+        "hints": "{{flow.variables.org_name}}",
+        "finish_on_key": "1",
+        "say": "We can't confirm you as the data owner of {{flow.variables.stated_org_name}}.  Did I hear you correctly? Press 1 to restate your organizations name or press pound for your update to be manually reviewed by a human expert on our team.",
+        "language": "en-US",
+        "stop_gather": true,
+        "profanity_filter": "true",
+        "timeout": 5,
+        "number_of_digits": 1,
+        "speech_timeout": "auto",
+        "loop": 3,
+        "gather_language": "en-US"
+      }
+    },
+    {
+      "name": "SetCallerName",
+      "type": "set-variables",
+      "transitions": [
+        {
+          "next": "Greeting",
+          "event": "next"
+        }
+      ],
+      "properties": {
+        "variables": [
+          {
+            "type": "string",
+            "value": "{{widgets.FetchCallerAndOrgName.parsed.name}}",
+            "key": "caller_name"
+          },
+          {
+            "type": "string",
+            "value": "{{widgets.FetchCallerAndOrgName.parsed.org_name}}",
+            "key": "organization_name"
+          }
+        ],
+        "offset": {
+          "x": -100,
+          "y": 420
+        }
+      }
+    },
+    {
+      "name": "SetStatedOrgName",
+      "type": "set-variables",
+      "transitions": [
+        {
+          "next": "OrgMatch",
+          "event": "next"
+        }
+      ],
+      "properties": {
+        "variables": [
+          {
+            "type": "string",
+            "value": "{{widgets.Greeting.SpeechResult}}",
+            "key": "stated_org_name"
+          }
+        ],
+        "offset": {
+          "x": -70,
+          "y": 950
+        }
+      }
+    },
+    {
+      "name": "OrgMatch",
+      "type": "split-based-on",
+      "transitions": [
+        {
+          "event": "noMatch"
+        },
+        {
+          "next": "PostStatedOrgAndName",
+          "event": "match",
+          "conditions": [
+            {
+              "friendly_name": "If value equal_to {{flows.variable.org_name}}",
+              "arguments": [
+                "{{flow.variables.stated_org_name}}"
+              ],
+              "type": "equal_to",
+              "value": "{{flow.variable.org_name}}"
+            }
+          ]
+        },
+        {
+          "next": "UnconfirmedOrganization",
+          "event": "match",
+          "conditions": [
+            {
+              "friendly_name": "If value not_equal_to {{flows.variable.org_name}}",
+              "arguments": [
+                "{{flow.variables.stated_org_name}}"
+              ],
+              "type": "not_equal_to",
+              "value": "{{flow.variable.org_name}}"
+            }
+          ]
+        }
+      ],
+      "properties": {
+        "input": "{{flow.variables.stated_org_name}}",
+        "offset": {
+          "x": -180,
+          "y": 1210
+        }
+      }
+    },
+    {
+      "name": "ResetStatedOrgName",
+      "type": "set-variables",
+      "transitions": [
+        {
+          "next": "OrgMatch",
+          "event": "next"
+        }
+      ],
+      "properties": {
+        "variables": [
+          {
+            "type": "string",
+            "value": "{{widgets.UnconfirmedOrganization.SpeechResult}}",
+            "key": "stated_org_name"
+          }
+        ],
+        "offset": {
+          "x": 400,
+          "y": 1810
+        }
+      }
+    },
+    {
+      "name": "DidNotHear",
+      "type": "say-play",
+      "transitions": [
+        {
+          "next": "UnconfirmedOrganization",
+          "event": "audioComplete"
+        }
+      ],
+      "properties": {
+        "voice": "default",
+        "offset": {
+          "x": 850,
+          "y": 1440
+        },
+        "loop": 3,
+        "say": "Sorry.  I didn't catch that.",
+        "language": "en-US"
+      }
+    },
+    {
+      "name": "PrepForAgent",
+      "type": "say-play",
+      "transitions": [
+        {
+          "event": "audioComplete"
+        }
+      ],
+      "properties": {
+        "voice": "default",
+        "offset": {
+          "x": -30,
+          "y": 2210
+        },
+        "loop": 1,
+        "say": "Connecting you to a live agent now.",
+        "language": "en-US"
+      }
+    },
+    {
+      "name": "FetchCallerAndOrgName",
+      "type": "run-function",
+      "transitions": [
+        {
+          "next": "SetCallerName",
+          "event": "success"
+        },
+        {
+          "next": "NameFail_Greeting",
+          "event": "fail"
+        }
+      ],
+      "properties": {
+        "service_sid": "ZSf307e0321fd95d1effe22a6b83720dc3",
+        "environment_sid": "ZE8e14d34fec2db7a604c3b15c9f9cb7c6",
+        "offset": {
+          "x": 120,
+          "y": 190
+        },
+        "function_sid": "ZHb2908376ca34d5458d36e13f2e309cb8",
+        "url": "https://bearhug-inbound-2318.twil.io/FetchCallerAndOrgName"
+      }
+    },
+    {
+      "name": "PostStatedOrgAndName",
+      "type": "run-function",
+      "transitions": [
+        {
+          "next": "PrepForAgent",
+          "event": "success"
+        },
+        {
+          "next": "PrepForAgent",
+          "event": "fail"
+        }
+      ],
+      "properties": {
+        "service_sid": "ZSf307e0321fd95d1effe22a6b83720dc3",
+        "environment_sid": "ZE8e14d34fec2db7a604c3b15c9f9cb7c6",
+        "offset": {
+          "x": -100,
+          "y": 1820
+        },
+        "function_sid": "ZH1ed9f254fe79cc973a07529c14638a7e",
+        "parameters": [
+          {
+            "value": "{{flow.variables.stated_org_name}}",
+            "key": "stated_org_name"
+          },
+          {
+            "value": "{{flow.variables.caller_name}}",
+            "key": "caller_name"
+          }
+        ],
+        "url": "https://bearhug-inbound-2318.twil.io/PostStatedOrgAndName"
+      }
+    }
+  ],
+  "initial_state": "Trigger",
+  "flags": {
+    "allow_concurrent_calls": true
+  }
+}

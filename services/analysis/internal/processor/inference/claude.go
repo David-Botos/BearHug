@@ -84,7 +84,7 @@ func InitInferenceClient() (*ClaudeClient, error) {
 	log := logger.Get()
 	log.Debug().Msg("Initializing Claude inference client")
 
-	if err := env.LoadEnvIfDevelopment(); err != nil {
+	if err := env.LoadEnvFile(); err != nil {
 		log.Error().Err(err).Msg("Failed to load development environment")
 		return nil, err
 	}

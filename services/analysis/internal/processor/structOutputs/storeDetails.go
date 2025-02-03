@@ -31,6 +31,26 @@ func StoreDetails(extractedDetails []*DetailAnalysisResult, callID string) error
 				}
 			}
 		}
+		if detail.Category == "CONTACT" {
+			if len(detail.ContactData.Contacts) > 0 {
+				contactStorageErr := supabase.StoreNewContacts(detail.ContactData.Contacts, callID)
+				if contactStorageErr != nil {
+					log.Error().
+						Err(contactStorageErr).
+						Msg("Failed to store contact details in supa")
+					return fmt.Errorf("error storing contact details: %w", contactStorageErr)
+				}
+			}
+			if len(detail.ContactData.Phones) > 0 {
+				phoneStorageErr := supabase.StoreNewPhones(detail.ContactData.Phones, callID)
+				if phoneStorageErr != nil {
+					log.Error().
+						Err(phoneStorageErr).
+						Msg("Failed to store phone details in supa")
+					return fmt.Errorf("error storing phone details: %w", phoneStorageErr)
+				}
+			}
+		}
 		// TODO: else if ... other detail categories
 	}
 	return nil

@@ -9,9 +9,11 @@ import (
 
 // HandleTriagedAnalysis takes the triage results and launches appropriate analysis routines
 func HandleTriagedAnalysis(
+	org_id string,
 	transcript string,
 	identifiedDetails *IdentifiedDetails,
 	serviceCtx ServiceContext,
+	call_id string,
 ) ([]*DetailAnalysisResult, error) {
 	log := logger.Get()
 
@@ -57,14 +59,14 @@ func HandleTriagedAnalysis(
 			switch DetailCategory(cat) {
 			case CapacityCategory:
 				result, err = analyzeCapacityCategoryDetails(transcript, serviceCtx)
+			case ContactCategory:
+				result, err = analyzeContactCategoryDetails(transcript, org_id, serviceCtx, call_id)
 			// case SchedulingCategory:
 			//     result, err = analyzeSchedulingDetails(transcript, serviceCtx)
 			// case ProgramCategory:
 			//     result, err = analyzeProgramDetails(transcript, serviceCtx)
 			// case ReqDocsCategory:
 			//     result, err = analyzeReqDocsDetails(transcript, serviceCtx)
-			// case ContactCategory:
-			//     result, err = analyzeContactDetails(transcript, serviceCtx)
 			default:
 				err = fmt.Errorf("unknown category: %s", cat)
 			}

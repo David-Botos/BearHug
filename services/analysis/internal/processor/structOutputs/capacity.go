@@ -102,49 +102,6 @@ func writeServiceDescription(builder *strings.Builder, service hsds_types.Servic
 	builder.WriteString("\n")
 }
 
-// analyzeCapacityDetails processes service capacity and unit information
-func analyzeCapacityCategoryDetails(transcript string, serviceCtx ServiceContext) (DetailAnalysisResult, error) {
-	log := logger.Get()
-	log.Debug().Msg("Starting capacity details analysis")
-
-	// Generate Prompt and Schema
-	capacityCategoryPrompt, capacitySchema, err := GenerateServiceCapacityPrompt(transcript, serviceCtx)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to generate service capacity prompt")
-		return DetailAnalysisResult{}, fmt.Errorf(`Failure when generating service capacity prompt: %w`, err)
-	}
-
-	// Declare Claude Inference Client
-	client, err := inference.InitInferenceClient()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to initialize inference client")
-		return DetailAnalysisResult{}, fmt.Errorf("failed to initialize inference client: %w", err)
-	}
-
-	log.Debug().Msg("Running Claude inference for capacity analysis")
-	// Run inference
-	unformattedCapacityDetails, inferenceErr := client.RunClaudeInference(inference.PromptParams{Prompt: capacityCategoryPrompt, Schema: capacitySchema})
-	if inferenceErr != nil {
-		log.Error().Err(inferenceErr).Msg("Error during inference execution")
-		return DetailAnalysisResult{}, fmt.Errorf(`Error running inference to extract capacity details: %w`, inferenceErr)
-	}
-
-	log.Debug().Msg("Converting inference response to capacity and unit objects")
-	capacityDetails, unitDetails, capacityAndUnitInfConvErr := infToCapacityAndUnits(unformattedCapacityDetails, serviceCtx)
-	if capacityAndUnitInfConvErr != nil {
-		log.Error().Err(capacityAndUnitInfConvErr).Msg("Failed to convert inference response")
-		return DetailAnalysisResult{}, fmt.Errorf(`Error while converting the inference response to clean capacity and unit objects: %w`, capacityAndUnitInfConvErr)
-	}
-
-	var result DetailAnalysisResult = *NewCapacityResult(capacityDetails, unitDetails)
-	log.Info().
-		Int("capacities_count", len(capacityDetails)).
-		Int("units_count", len(unitDetails)).
-		Msg("Capacity analysis completed successfully")
-
-	return result, nil
-}
-
 type capacityInference struct {
 	ServiceName     string   `json:"serviceName"`
 	Available       float64  `json:"available"`
@@ -460,4 +417,47 @@ func calculateStringSimilarity(s1, s2 string) float64 {
 		return 0
 	}
 	return 1 - float64(d)/maxLen
+}
+
+// analyzeCapacityDetails processes service capacity and unit information
+func analyzeCapacityCategoryDetails(transcript string, serviceCtx ServiceContext) (DetailAnalysisResult, error) {
+	log := logger.Get()
+	log.Debug().Msg("Starting capacity details analysis")
+
+	// Generate Prompt and Schema
+	capacityCategoryPrompt, capacitySchema, err := GenerateServiceCapacityPrompt(transcript, serviceCtx)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to generate service capacity prompt")
+		return DetailAnalysisResult{}, fmt.Errorf(`Failure when generating service capacity prompt: %w`, err)
+	}
+
+	// Declare Claude Inference Client
+	client, err := inference.InitInferenceClient()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to initialize inference client")
+		return DetailAnalysisResult{}, fmt.Errorf("failed to initialize inference client: %w", err)
+	}
+
+	log.Debug().Msg("Running Claude inference for capacity analysis")
+	// Run inference
+	unformattedCapacityDetails, inferenceErr := client.RunClaudeInference(inference.PromptParams{Prompt: capacityCategoryPrompt, Schema: capacitySchema})
+	if inferenceErr != nil {
+		log.Error().Err(inferenceErr).Msg("Error during inference execution")
+		return DetailAnalysisResult{}, fmt.Errorf(`Error running inference to extract capacity details: %w`, inferenceErr)
+	}
+
+	log.Debug().Msg("Converting inference response to capacity and unit objects")
+	capacityDetails, unitDetails, infConvErr := infToCapacityAndUnits(unformattedCapacityDetails, serviceCtx)
+	if infConvErr != nil {
+		log.Error().Err(infConvErr).Msg("Failed to convert inference response")
+		return DetailAnalysisResult{}, fmt.Errorf(`Error while converting the inference response to clean capacity and unit objects: %w`, infConvErr)
+	}
+
+	var result DetailAnalysisResult = NewCapacityResult(capacityDetails, unitDetails)
+	log.Info().
+		Int("capacities_count", len(capacityDetails)).
+		Int("units_count", len(unitDetails)).
+		Msg("Capacity analysis completed successfully")
+
+	return result, nil
 }

@@ -339,3 +339,176 @@ func StoreNewUnits(unitObjects []*hsds_types.Unit, callID string) error {
 
 	return nil
 }
+
+func StoreNewContacts(contactObjects []*hsds_types.Contact, callID string) error {
+	log := logger.Get()
+
+	client, err := InitSupabaseClient()
+	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("Failed to initialize Supabase client")
+		return fmt.Errorf("failed to initialize Supabase client: %w", err)
+	}
+
+	var metadataInputs []MetadataInput
+
+	for _, contactObj := range contactObjects {
+		contactData := map[string]interface{}{
+			"id": contactObj.ID,
+		}
+
+		// Add optional fields only if they're not nil
+		if contactObj.OrganizationID != nil {
+			contactData["organization_id"] = *contactObj.OrganizationID
+		}
+		if contactObj.ServiceID != nil {
+			contactData["service_id"] = *contactObj.ServiceID
+		}
+		if contactObj.ServiceAtLocationID != nil {
+			contactData["service_at_location_id"] = *contactObj.ServiceAtLocationID
+		}
+		if contactObj.LocationID != nil {
+			contactData["location_id"] = *contactObj.LocationID
+		}
+		if contactObj.Name != nil {
+			contactData["name"] = *contactObj.Name
+		}
+		if contactObj.Title != nil {
+			contactData["title"] = *contactObj.Title
+		}
+		if contactObj.Department != nil {
+			contactData["department"] = *contactObj.Department
+		}
+		if contactObj.Email != nil {
+			contactData["email"] = *contactObj.Email
+		}
+
+		data, _, err := client.From("contact").
+			Insert(contactData, false, "", "representation", "").
+			Execute()
+		if err != nil {
+			log.Error().
+				Err(err).
+				Str("contact_id", contactObj.ID).
+				Interface("contact_data", contactData).
+				Msg("Failed to insert contact data")
+			return fmt.Errorf("failed to insert contact data: %w, data: %s", err, string(data))
+		}
+
+		log.Debug().
+			Str("contact_id", contactObj.ID).
+			Msg("Successfully created contact record")
+
+		metadataInputs = append(metadataInputs, MetadataInput{
+			ResourceID:       contactObj.ID,
+			CallID:           callID,
+			ResourceType:     "contact",
+			ReplacementValue: "new entry",
+			LastActionType:   "CREATE",
+		})
+	}
+
+	if len(metadataInputs) > 0 {
+		if err := CreateAndStoreMetadata(metadataInputs); err != nil {
+			log.Error().
+				Err(err).
+				Int("metadata_count", len(metadataInputs)).
+				Msg("Failed to create metadata for contact objects")
+			return fmt.Errorf("failed to create metadata for contact objs: %w", err)
+		}
+
+		log.Info().
+			Int("metadata_count", len(metadataInputs)).
+			Msg("Successfully created metadata for contact objects")
+	}
+
+	return nil
+}
+
+func StoreNewPhones(phoneObjects []*hsds_types.Phone, callID string) error {
+	log := logger.Get()
+
+	client, err := InitSupabaseClient()
+	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("Failed to initialize Supabase client")
+		return fmt.Errorf("failed to initialize Supabase client: %w", err)
+	}
+
+	var metadataInputs []MetadataInput
+
+	for _, phoneObj := range phoneObjects {
+		phoneData := map[string]interface{}{
+			"id":     phoneObj.ID,
+			"number": phoneObj.Number, // Required field
+		}
+
+		// Add optional fields only if they're not nil
+		if phoneObj.LocationID != nil {
+			phoneData["location_id"] = *phoneObj.LocationID
+		}
+		if phoneObj.ServiceID != nil {
+			phoneData["service_id"] = *phoneObj.ServiceID
+		}
+		if phoneObj.OrganizationID != nil {
+			phoneData["organization_id"] = *phoneObj.OrganizationID
+		}
+		if phoneObj.ContactID != nil {
+			phoneData["contact_id"] = *phoneObj.ContactID
+		}
+		if phoneObj.ServiceAtLocationID != nil {
+			phoneData["service_at_location_id"] = *phoneObj.ServiceAtLocationID
+		}
+		if phoneObj.Extension != nil {
+			phoneData["extension"] = *phoneObj.Extension
+		}
+		if phoneObj.Type != nil {
+			phoneData["type"] = *phoneObj.Type
+		}
+		if phoneObj.Description != nil {
+			phoneData["description"] = *phoneObj.Description
+		}
+
+		data, _, err := client.From("phone").
+			Insert(phoneData, false, "", "representation", "").
+			Execute()
+		if err != nil {
+			log.Error().
+				Err(err).
+				Str("phone_id", phoneObj.ID).
+				Interface("phone_data", phoneData).
+				Msg("Failed to insert phone data")
+			return fmt.Errorf("failed to insert phone data: %w, data: %s", err, string(data))
+		}
+
+		log.Debug().
+			Str("phone_id", phoneObj.ID).
+			Msg("Successfully created phone record")
+
+		metadataInputs = append(metadataInputs, MetadataInput{
+			ResourceID:       phoneObj.ID,
+			CallID:           callID,
+			ResourceType:     "phone",
+			ReplacementValue: "new entry",
+			LastActionType:   "CREATE",
+		})
+	}
+
+	if len(metadataInputs) > 0 {
+		if err := CreateAndStoreMetadata(metadataInputs); err != nil {
+			log.Error().
+				Err(err).
+				Int("metadata_count", len(metadataInputs)).
+				Msg("Failed to create metadata for phone objects")
+			return fmt.Errorf("failed to create metadata for phone objs: %w", err)
+		}
+
+		log.Info().
+			Int("metadata_count", len(metadataInputs)).
+			Msg("Successfully created metadata for phone objects")
+	}
+
+	return nil
+}

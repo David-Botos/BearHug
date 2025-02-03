@@ -16,11 +16,11 @@ const (
 	ServicesTable        TableName = "services"
 	ServiceCapacityTable TableName = "service_capacity"
 	UnitTable            TableName = "unit"
+	ContactTable         TableName = "contact"
+	PhoneTable           TableName = "phone"
 	// ScheduleTable         TableName = "schedule"
 	// ProgramTable          TableName = "program"
 	// RequiredDocumentTable TableName = "required_document"
-	// ContactTable          TableName = "contact"
-	// PhoneTable            TableName = "phone"
 )
 
 // TableDescription contains information about what data belongs in each table
@@ -39,6 +39,14 @@ var tableDescriptions = []TableDescription{
 		Name:        UnitTable,
 		Description: "Defines custom units that give context to numerical values in service_capacity (e.g., beds, monetary awards)",
 	},
+	{
+		Name:        ContactTable,
+		Description: "Stores contact information for organization representatives",
+	},
+	{
+		Name:        PhoneTable,
+		Description: "Stores phone numbers for follow-up or additional information",
+	},
 	// {
 	// 	Name:        ScheduleTable,
 	// 	Description: "Defines service timing including start/end times, duration, and frequency (daily/weekly/monthly)",
@@ -51,14 +59,6 @@ var tableDescriptions = []TableDescription{
 	// 	Name:        RequiredDocumentTable,
 	// 	Description: "Lists required documentation for services (e.g., government ID)",
 	// },
-	// {
-	// 	Name:        ContactTable,
-	// 	Description: "Stores contact information for organization representatives",
-	// },
-	// {
-	// 	Name:        PhoneTable,
-	// 	Description: "Stores phone numbers for follow-up or additional information",
-	// },
 }
 
 // Define descriptions for each category
@@ -67,6 +67,11 @@ var categoryDescriptions = []CategoryDescription{
 		Category:    CapacityCategory,
 		Tables:      []TableName{ServiceCapacityTable, UnitTable},
 		Description: "Information about service capacity limits (e.g., number of beds) and their associated units of measurement",
+	},
+	{
+		Category:    ContactCategory,
+		Tables:      []TableName{ContactTable, PhoneTable},
+		Description: "Contact information for service representatives including phone numbers",
 	},
 	// {
 	// 	Category:    SchedulingCategory,
@@ -82,11 +87,6 @@ var categoryDescriptions = []CategoryDescription{
 	// 	Category:    ReqDocsCategory,
 	// 	Tables:      []TableName{RequiredDocumentTable},
 	// 	Description: "Documentation requirements for service participation",
-	// },
-	// {
-	// 	Category:    ContactCategory,
-	// 	Tables:      []TableName{ContactTable, PhoneTable},
-	// 	Description: "Contact information for service representatives including phone numbers",
 	// },
 }
 
@@ -141,10 +141,10 @@ var TriageDetailsTool = inference.ToolInputSchema{
 				"type": "string",
 				"enum": []string{
 					string(CapacityCategory),
+					string(ContactCategory),
 					// string(SchedulingCategory),
 					// string(ProgramCategory),
 					// string(ReqDocsCategory),
-					// string(ContactCategory),
 				},
 				"description": "Valid detail category name",
 			},
@@ -166,7 +166,7 @@ type IdentifiedDetails struct {
 	Reasoning          []string `json:"reasoning"`
 }
 
-//TODO: no need for a pointer here
+// TODO: no need for a pointer here
 func IdentifyDetailsForTriagedAnalysis(transcript string) (*IdentifiedDetails, error) {
 	log.Debug().Msg("Generating triage prompt and schema")
 	detailTriagePrompt, detailTriageSchema := GenerateTriagePrompt(transcript)

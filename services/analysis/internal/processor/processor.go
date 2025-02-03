@@ -51,9 +51,11 @@ func ProcessTranscript(params types.ProcTranscriptParams) (bool, error) {
 	if len(identifiedDetailTypes.DetectedCategories) > 0 {
 		log.Debug().Msg("Starting detail extraction from triaged analysis")
 		extractedDetails, detailExtractionErr := structOutputs.HandleTriagedAnalysis(
+			params.OrganizationID,
 			params.Transcript,
 			identifiedDetailTypes,
 			serviceCtx,
+			params.CallID,
 		)
 		if detailExtractionErr != nil {
 			log.Error().
@@ -79,7 +81,7 @@ func ProcessTranscript(params types.ProcTranscriptParams) (bool, error) {
 		// 	return false, fmt.Errorf("validation failed with unhandled error")
 		// }
 
-		///* --- Store all the details --- *///
+		///* --- Store all the NEW details --- *///
 		storageFailureErr := structOutputs.StoreDetails(extractedDetails, params.CallID)
 		if storageFailureErr != nil {
 			log.Error().

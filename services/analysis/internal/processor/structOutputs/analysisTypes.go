@@ -32,26 +32,41 @@ type CapacityResult struct {
 	Units      []*hsds_types.Unit
 }
 
+type ContactResult struct {
+	Contacts []*hsds_types.Contact
+	Phones   []*hsds_types.Phone
+}
+
 // DetailAnalysisResult holds the results of analyzing a specific category of details
 type DetailAnalysisResult struct {
 	Category DetailCategory
 
 	// Type-specific results
 	CapacityData *CapacityResult
+	ContactData  *ContactResult
 	// Add other category-specific fields as they are implemented
 	// SchedulingData *SchedulingResult
 	// ProgramData    *ProgramResult
 	// ReqDocsData    *ReqDocsResult
-	// ContactData    *ContactResult
 }
 
 // NewCapacityResult creates a new DetailAnalysisResult for capacity data
-func NewCapacityResult(capacities []*hsds_types.ServiceCapacity, units []*hsds_types.Unit) *DetailAnalysisResult {
-	return &DetailAnalysisResult{
+func NewCapacityResult(capacities []*hsds_types.ServiceCapacity, units []*hsds_types.Unit) DetailAnalysisResult {
+	return DetailAnalysisResult{
 		Category: CapacityCategory,
 		CapacityData: &CapacityResult{
 			Capacities: capacities,
 			Units:      units,
+		},
+	}
+}
+
+func NewContactResult(contacts []*hsds_types.Contact, phones []*hsds_types.Phone) DetailAnalysisResult {
+	return DetailAnalysisResult{
+		Category: ContactCategory,
+		ContactData: &ContactResult{
+			Contacts: contacts,
+			Phones:   phones,
 		},
 	}
 }

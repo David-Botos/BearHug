@@ -1,6 +1,7 @@
 package structOutputs
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -11,7 +12,63 @@ import (
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/inference"
 	"github.com/david-botos/BearHug/services/analysis/internal/supabase"
 	"github.com/david-botos/BearHug/services/analysis/pkg/logger"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
+
+// Helper functions for the span attributes
+func countServicesByStatus(ctx ServiceContext, status string) int {
+	count := 0
+	for _, service := range ctx.ExistingServices {
+		if string(service.Status) == status {
+			count++
+		}
+	}
+	for _, service := range ctx.NewServices {
+		if string(service.Status) == status {
+			count++
+		}
+	}
+	return count
+}
+
+func countServicesWithField(ctx ServiceContext, fieldName string) int {
+	count := 0
+	for _, service := range ctx.ExistingServices {
+		switch fieldName {
+		case "EligibilityDescription":
+			if service.EligibilityDescription != nil {
+				count++
+			}
+		case "FeesDescription":
+			if service.FeesDescription != nil {
+				count++
+			}
+		case "ApplicationProcess":
+			if service.ApplicationProcess != nil {
+				count++
+			}
+		}
+	}
+	for _, service := range ctx.NewServices {
+		switch fieldName {
+		case "EligibilityDescription":
+			if service.EligibilityDescription != nil {
+				count++
+			}
+		case "FeesDescription":
+			if service.FeesDescription != nil {
+				count++
+			}
+		case "ApplicationProcess":
+			if service.ApplicationProcess != nil {
+				count++
+			}
+		}
+	}
+	return count
+}
 
 func GenerateServiceCapacityPrompt(transcript string, serviceCtx ServiceContext) (string, inference.ToolInputSchema, error) {
 	log := logger.Get()
@@ -103,44 +160,95 @@ func writeServiceDescription(builder *strings.Builder, service hsds_types.Servic
 }
 
 // analyzeCapacityDetails processes service capacity and unit information
-func analyzeCapacityCategoryDetails(transcript string, serviceCtx ServiceContext) (DetailAnalysisResult, error) {
+func analyzeCapacityCategoryDetails(ctx context.Context, transcript string, serviceCtx ServiceContext) (DetailAnalysisResult, error) {
+	tracer := otel.GetTracerProvider().Tracer("capacity-analysis")
+	ctx, span := tracer.Start(ctx, "analyze_capacity_details",
+		trace.WithAttributes(
+			attribute.Int("transcript_length", len(transcript)),
+			attribute.Int("existing_services_count", len(serviceCtx.ExistingServices)),
+			attribute.Int("new_services_count", len(serviceCtx.NewServices)),
+			// Add service status distribution
+			attribute.Int("active_services", countServicesByStatus(serviceCtx, "active")),
+			attribute.Int("inactive_services", countServicesByStatus(serviceCtx, "inactive")),
+			attribute.Int("defunct_services", countServicesByStatus(serviceCtx, "defunct")),
+			// Add service completeness metrics
+			attribute.Int("services_with_eligibility", countServicesWithField(serviceCtx, "EligibilityDescription")),
+			attribute.Int("services_with_fees", countServicesWithField(serviceCtx, "FeesDescription")),
+			attribute.Int("services_with_process", countServicesWithField(serviceCtx, "ApplicationProcess")),
+		),
+	)
+	defer span.End()
+
 	log := logger.Get()
 	log.Debug().Msg("Starting capacity details analysis")
 
 	// Generate Prompt and Schema
+	ctx, promptSpan := tracer.Start(ctx, "generate_capacity_prompt")
 	capacityCategoryPrompt, capacitySchema, err := GenerateServiceCapacityPrompt(transcript, serviceCtx)
 	if err != nil {
+		promptSpan.RecordError(err)
+		promptSpan.End()
 		log.Error().Err(err).Msg("Failed to generate service capacity prompt")
 		return DetailAnalysisResult{}, fmt.Errorf(`Failure when generating service capacity prompt: %w`, err)
 	}
+	promptSpan.SetAttributes(
+		attribute.Int("prompt_length", len(capacityCategoryPrompt)),
+		attribute.String("schema_type", capacitySchema.Type),
+	)
+	promptSpan.End()
 
-	// Declare Claude Inference Client
+	// Initialize Client
+	ctx, clientSpan := tracer.Start(ctx, "init_inference_client")
 	client, err := inference.InitInferenceClient()
 	if err != nil {
+		clientSpan.RecordError(err)
+		clientSpan.End()
 		log.Error().Err(err).Msg("Failed to initialize inference client")
 		return DetailAnalysisResult{}, fmt.Errorf("failed to initialize inference client: %w", err)
 	}
+	clientSpan.End()
 
+	// Run inference - Note: RunClaudeInference creates its own spans
 	log.Debug().Msg("Running Claude inference for capacity analysis")
-	// Run inference
-	unformattedCapacityDetails, inferenceErr := client.RunClaudeInference(inference.PromptParams{Prompt: capacityCategoryPrompt, Schema: capacitySchema})
+	unformattedCapacityDetails, inferenceErr := client.RunClaudeInference(ctx, inference.PromptParams{
+		Prompt: capacityCategoryPrompt,
+		Schema: capacitySchema,
+	})
 	if inferenceErr != nil {
+		span.RecordError(inferenceErr)
 		log.Error().Err(inferenceErr).Msg("Error during inference execution")
 		return DetailAnalysisResult{}, fmt.Errorf(`Error running inference to extract capacity details: %w`, inferenceErr)
 	}
 
+	// Convert inference response
+	ctx, conversionSpan := tracer.Start(ctx, "convert_capacity_response")
 	log.Debug().Msg("Converting inference response to capacity and unit objects")
 	capacityDetails, unitDetails, capacityAndUnitInfConvErr := infToCapacityAndUnits(unformattedCapacityDetails, serviceCtx)
 	if capacityAndUnitInfConvErr != nil {
+		conversionSpan.RecordError(capacityAndUnitInfConvErr)
+		conversionSpan.End()
 		log.Error().Err(capacityAndUnitInfConvErr).Msg("Failed to convert inference response")
 		return DetailAnalysisResult{}, fmt.Errorf(`Error while converting the inference response to clean capacity and unit objects: %w`, capacityAndUnitInfConvErr)
 	}
+	conversionSpan.SetAttributes(
+		attribute.Int("capacities_found", len(capacityDetails)),
+		attribute.Int("units_found", len(unitDetails)),
+	)
+	conversionSpan.End()
 
+	// Create result
 	var result DetailAnalysisResult = *NewCapacityResult(capacityDetails, unitDetails)
+
 	log.Info().
 		Int("capacities_count", len(capacityDetails)).
 		Int("units_count", len(unitDetails)).
 		Msg("Capacity analysis completed successfully")
+
+	span.SetAttributes(
+		attribute.Bool("success", true),
+		attribute.Int("final_capacities_count", len(capacityDetails)),
+		attribute.Int("final_units_count", len(unitDetails)),
+	)
 
 	return result, nil
 }

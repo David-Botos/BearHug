@@ -3,6 +3,7 @@ package supabase
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/david-botos/BearHug/services/analysis/internal/hsds_types"
 	"github.com/supabase-community/postgrest-go"
@@ -80,9 +81,9 @@ func FetchOrganizationServices(organizationID string) ([]hsds_types.Service, err
             assurer_email,
             licenses,
             alert,
-            last_modified,
-            created_at,
-            updated_at
+        	last_modified',
+        	created_at',
+        	updated_at'
         `, "", false).
 		Eq("organization_id", organizationID).
 		Order("name", order).
@@ -91,8 +92,33 @@ func FetchOrganizationServices(organizationID string) ([]hsds_types.Service, err
 		return nil, fmt.Errorf("failed to fetch services: %w", err)
 	}
 
-	// Unmarshal the byte array into the services slice
-	if err := json.Unmarshal(data, &services); err != nil {
+	fmt.Printf("Raw data from Supabase: %s\n", string(data))
+
+	// Pre-process the JSON to handle timestamp format
+	var rawData []map[string]interface{}
+	if err := json.Unmarshal(data, &rawData); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal raw data: %w", err)
+	}
+
+	// Process timestamps
+	for i := range rawData {
+		if lm, ok := rawData[i]["last_modified"].(string); ok && lm != "" {
+			// Parse the timestamp and add UTC timezone
+			t, err := time.Parse("2006-01-02T15:04:05.999999", lm)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse timestamp: %w", err)
+			}
+			rawData[i]["last_modified"] = t.UTC().Format(time.RFC3339)
+		}
+	}
+	// Marshal back to JSON
+	processedData, err := json.Marshal(rawData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal processed data: %w", err)
+	}
+
+	// Unmarshal into services slice
+	if err := json.Unmarshal(processedData, &services); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal services data: %w", err)
 	}
 

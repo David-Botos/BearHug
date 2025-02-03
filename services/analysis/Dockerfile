@@ -1,4 +1,3 @@
-# Dockerfile
 # Start from the official golang image
 FROM golang:1.23-alpine3.21 AS builder
 
@@ -35,13 +34,20 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/main /app/cmd/main.go
 
 # Start a new stage from scratch
-FROM alpine:3.19
+FROM alpine:3.21
 
 # Import from builder
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /etc/group /etc/group
+
+# Install tzdata package in the final stage
+RUN apk add --no-cache tzdata
+
+# Set an ENV variable to define the timezone as UTC
+ENV TZ=UTC
+ENV ZONEINFO=/usr/share/zoneinfo
 
 # Copy the binary from builder
 COPY --from=builder /app/main /app/main

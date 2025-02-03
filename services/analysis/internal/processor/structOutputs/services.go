@@ -1,6 +1,7 @@
 package structOutputs
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -9,6 +10,9 @@ import (
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/inference"
 	"github.com/david-botos/BearHug/services/analysis/internal/supabase"
 	"github.com/david-botos/BearHug/services/analysis/pkg/logger"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func GenerateServicesPrompt(organization_id string, transcript string) (string, inference.ToolInputSchema, error) {
@@ -160,41 +164,71 @@ type ServicesExtracted struct {
 	NewServices []ExtractedService `json:"new_services"`
 }
 
-func ServicesExtraction(org_id string, transcript string) (ServicesExtracted, error) {
+func ServicesExtraction(ctx context.Context, org_id string, transcript string) (ServicesExtracted, error) {
+	tracer := otel.GetTracerProvider().Tracer("services-extraction")
+	ctx, span := tracer.Start(ctx, "services_extraction",
+		trace.WithAttributes(
+			attribute.String("organization_id", org_id),
+			attribute.Int("transcript_length", len(transcript)),
+		),
+	)
+	defer span.End()
+
 	log := logger.Get()
 	log.Info().
 		Str("organization_id", org_id).
 		Int("transcript_length", len(transcript)).
 		Msg("Starting services extraction")
 
+	// Generate prompt with tracing
+	ctx, promptSpan := tracer.Start(ctx, "generate_services_prompt")
 	servicesPrompt, servicesSchema, promptErr := GenerateServicesPrompt(org_id, transcript)
 	if promptErr != nil {
+		promptSpan.RecordError(promptErr)
+		promptSpan.End()
 		log.Error().
 			Err(promptErr).
 			Str("organization_id", org_id).
 			Msg("Failed to generate services prompt")
 		return ServicesExtracted{}, fmt.Errorf("failed to generate services prompt: %w", promptErr)
 	}
+	promptSpan.SetAttributes(
+		attribute.Int("prompt_length", len(servicesPrompt)),
+	)
+	promptSpan.End()
 
+	// Initialize client with tracing
+	ctx, clientSpan := tracer.Start(ctx, "init_inference_client")
 	client, err := inference.InitInferenceClient()
 	if err != nil {
+		clientSpan.RecordError(err)
+		clientSpan.End()
 		log.Error().
 			Err(err).
 			Msg("Failed to initialize inference client")
 		return ServicesExtracted{}, fmt.Errorf("failed to initialize inference client: %w", err)
 	}
+	clientSpan.End()
 
 	log.Debug().Msg("Running Claude inference for services extraction")
-	servicesInferenceResult, servicesInferenceResultErr := client.RunClaudeInference(inference.PromptParams{Prompt: servicesPrompt, Schema: servicesSchema})
+	servicesInferenceResult, servicesInferenceResultErr := client.RunClaudeInference(ctx, inference.PromptParams{
+		Prompt: servicesPrompt,
+		Schema: servicesSchema,
+	})
 	if servicesInferenceResultErr != nil {
+		span.RecordError(servicesInferenceResultErr)
 		log.Error().
 			Err(servicesInferenceResultErr).
 			Msg("Error occurred during services inference")
 		return ServicesExtracted{}, fmt.Errorf("error reading response: %w", servicesInferenceResultErr)
 	}
 
+	// Process results with tracing
+	ctx, processSpan := tracer.Start(ctx, "process_inference_results")
 	jsonBytes, err := json.Marshal(servicesInferenceResult)
 	if err != nil {
+		processSpan.RecordError(err)
+		processSpan.End()
 		log.Error().
 			Err(err).
 			Msg("Failed to marshal response map to JSON")
@@ -203,11 +237,24 @@ func ServicesExtraction(org_id string, transcript string) (ServicesExtracted, er
 
 	var servicesExtracted ServicesExtracted
 	if err := json.Unmarshal(jsonBytes, &servicesExtracted); err != nil {
+		processSpan.RecordError(err)
+		processSpan.End()
 		log.Error().
 			Err(err).
 			Msg("Failed to unmarshal Claude inference response")
 		return ServicesExtracted{}, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
+
+	processSpan.SetAttributes(
+		attribute.Int("extracted_services_count", len(servicesExtracted.NewServices)),
+	)
+	processSpan.End()
+
+	// Set final success attributes on main span
+	span.SetAttributes(
+		attribute.Int("total_services_extracted", len(servicesExtracted.NewServices)),
+		attribute.Bool("success", true),
+	)
 
 	log.Info().
 		Int("extracted_services_count", len(servicesExtracted.NewServices)).
@@ -216,25 +263,46 @@ func ServicesExtraction(org_id string, transcript string) (ServicesExtracted, er
 	return servicesExtracted, nil
 }
 
-func HandleExtractedServices(extractedServices ServicesExtracted, organizationID string, callID string) (ServiceContext, error) {
+func HandleExtractedServices(ctx context.Context, extractedServices ServicesExtracted, organizationID string, callID string) (ServiceContext, error) {
+	tracer := otel.GetTracerProvider().Tracer("services-handler")
+	ctx, span := tracer.Start(ctx, "handle_extracted_services",
+		trace.WithAttributes(
+			attribute.String("organization_id", organizationID),
+			attribute.String("call_id", callID),
+			attribute.Int("extracted_services_count", len(extractedServices.NewServices)),
+		),
+	)
+	defer span.End()
+
 	log := logger.Get()
 	log.Info().
 		Str("organization_id", organizationID).
 		Int("services_count", len(extractedServices.NewServices)).
 		Msg("Starting to handle extracted services")
 
-	verificationResults, err := VerifyServiceUniqueness(extractedServices, organizationID)
+	// Verify service uniqueness with tracing
+	ctx, verifySpan := tracer.Start(ctx, "verify_service_uniqueness")
+	verificationResults, err := VerifyServiceUniqueness(ctx, extractedServices, organizationID)
 	if err != nil {
+		verifySpan.RecordError(err)
+		verifySpan.End()
 		return ServiceContext{}, fmt.Errorf("failed to verify service uniqueness: %w", err)
 	}
+	verifySpan.SetAttributes(
+		attribute.Int("new_services_count", len(verificationResults.NewServices)),
+		attribute.Int("update_services_count", len(verificationResults.UpdateServices)),
+		attribute.Int("unchanged_services_count", len(verificationResults.UnchangedServices)),
+	)
+	verifySpan.End()
 
 	serviceContext := ServiceContext{
 		ExistingServices: make([]*hsds_types.Service, 0),
 		NewServices:      make([]*hsds_types.Service, 0),
 	}
 
-	// Convert new services to HSDS format
+	// Convert new services to HSDS format with tracing
 	if len(verificationResults.NewServices) > 0 {
+		ctx, convertSpan := tracer.Start(ctx, "convert_new_services")
 		for _, extractedService := range verificationResults.NewServices {
 			opts := &hsds_types.ServiceOptions{
 				Description:            &extractedService.Description,
@@ -251,6 +319,8 @@ func HandleExtractedServices(extractedServices ServicesExtracted, organizationID
 				opts,
 			)
 			if err != nil {
+				convertSpan.RecordError(err)
+				convertSpan.End()
 				return ServiceContext{}, fmt.Errorf("error converting new service '%s': %w", extractedService.Name, err)
 			}
 
@@ -270,23 +340,50 @@ func HandleExtractedServices(extractedServices ServicesExtracted, organizationID
 			}
 			serviceContext.NewServices = append(serviceContext.NewServices, hsdsService)
 		}
+		convertSpan.SetAttributes(
+			attribute.Int("converted_services_count", len(serviceContext.NewServices)),
+		)
+		convertSpan.End()
 
-		if err := supabase.StoreNewServices(serviceContext.NewServices, callID); err != nil {
+		// Store new services with tracing
+		ctx, storeSpan := tracer.Start(ctx, "store_new_services")
+		if err := supabase.StoreNewServices(ctx, serviceContext.NewServices, callID); err != nil {
+			storeSpan.RecordError(err)
+			storeSpan.End()
 			return ServiceContext{}, fmt.Errorf("failed to store new services: %w", err)
 		}
+		storeSpan.SetAttributes(
+			attribute.Int("stored_services_count", len(serviceContext.NewServices)),
+		)
+		storeSpan.End()
 	}
 
-	// Handle existing service updates
+	// Handle existing service updates with tracing
 	if len(verificationResults.UpdateServices) > 0 {
-		if err := UpdateExistingServices(verificationResults.UpdateServices, callID); err != nil {
+		ctx, updateSpan := tracer.Start(ctx, "update_existing_services")
+		if err := UpdateExistingServices(ctx, verificationResults.UpdateServices, callID); err != nil {
+			updateSpan.RecordError(err)
+			updateSpan.End()
 			return ServiceContext{}, fmt.Errorf("failed to update existing services: %w", err)
 		}
 		for _, updatedService := range verificationResults.UpdateServices {
 			serviceContext.ExistingServices = append(serviceContext.ExistingServices, updatedService.ExistingService)
 		}
+		updateSpan.SetAttributes(
+			attribute.Int("updated_services_count", len(verificationResults.UpdateServices)),
+		)
+		updateSpan.End()
 	}
 
 	serviceContext.ExistingServices = append(serviceContext.ExistingServices, verificationResults.UnchangedServices...)
+
+	// Set final metrics on the main span
+	span.SetAttributes(
+		attribute.Int("total_services_processed", len(serviceContext.NewServices)+len(serviceContext.ExistingServices)),
+		attribute.Int("new_services_created", len(serviceContext.NewServices)),
+		attribute.Int("existing_services_updated", len(verificationResults.UpdateServices)),
+		attribute.Int("services_unchanged", len(verificationResults.UnchangedServices)),
+	)
 
 	return serviceContext, nil
 }

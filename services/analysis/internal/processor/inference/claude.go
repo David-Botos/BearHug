@@ -2,6 +2,7 @@ package inference
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,6 +11,8 @@ import (
 
 	env "github.com/david-botos/BearHug/services/analysis/pkg/ENV"
 	"github.com/david-botos/BearHug/services/analysis/pkg/logger"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type PromptParams struct {
@@ -98,7 +101,16 @@ func InitInferenceClient() (*ClaudeClient, error) {
 }
 
 // RunClaudeInference performs inference with structured output validation
-func (c *ClaudeClient) RunClaudeInference(params PromptParams) (map[string]interface{}, error) {
+func (c *ClaudeClient) RunClaudeInference(ctx context.Context, params PromptParams) (map[string]interface{}, error) {
+	ctx, span := c.tracer.Start(ctx, "claude.inference",
+		trace.WithAttributes(
+			attribute.String("model", "claude-3-5-sonnet-20241022"),
+			attribute.Int("max_tokens", 1500),
+			attribute.String("inference_type", params.Schema.Type),
+		),
+	)
+	defer span.End()
+
 	log := logger.Get()
 	log.Debug().
 		Str("model", "claude-3-5-sonnet-20241022").
@@ -124,110 +136,91 @@ func (c *ClaudeClient) RunClaudeInference(params PromptParams) (map[string]inter
 		},
 	}
 
-	// Marshal the request body
+	// Add request preparation span
+	_, prepSpan := c.tracer.Start(ctx, "prepare_request")
 	jsonData, err := json.Marshal(reqBody)
 	if err != nil {
-		log.Error().
-			Err(err).
-			Msg("Failed to marshal request body")
+		prepSpan.RecordError(err)
+		prepSpan.End()
 		return nil, fmt.Errorf("error marshaling request: %w", err)
 	}
+	prepSpan.End()
 
-	// Create request
-	req, err := http.NewRequest("POST", "https://api.anthropic.com/v1/messages", bytes.NewBuffer(jsonData))
+	// Create and execute request with tracing
+	_, httpSpan := c.tracer.Start(ctx, "http_request")
+	req, err := http.NewRequestWithContext(ctx, "POST", "https://api.anthropic.com/v1/messages", bytes.NewBuffer(jsonData))
 	if err != nil {
-		log.Error().
-			Err(err).
-			Msg("Failed to create HTTP request")
+		httpSpan.RecordError(err)
+		httpSpan.End()
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
 
-	// Set headers
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("x-api-key", c.apiKey)
 	req.Header.Set("anthropic-version", "2023-06-01")
 
-	log.Debug().
-		Str("method", req.Method).
-		Str("url", req.URL.String()).
-		Msg("Sending request to Claude API")
-
-	// Make request
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		log.Error().
-			Err(err).
-			Msg("Failed to execute HTTP request")
+		httpSpan.RecordError(err)
+		httpSpan.End()
 		return nil, fmt.Errorf("error making request: %w", err)
 	}
 	defer resp.Body.Close()
+	httpSpan.End()
 
-	log.Debug().
-		Int("status_code", resp.StatusCode).
-		Msg("Received response from Claude API")
-
+	// Process response with tracing
+	_, processSpan := c.tracer.Start(ctx, "process_response")
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Error().
-			Err(err).
-			Msg("Failed to read response body")
+		processSpan.RecordError(err)
+		processSpan.End()
 		return nil, fmt.Errorf("error reading response: %w", err)
 	}
 
-	// Parse response
 	var inferenceResp InferenceResponse
 	if err := json.Unmarshal(body, &inferenceResp); err != nil {
-		log.Error().
-			Err(err).
-			Str("body", string(body)).
-			Msg("Failed to parse response body")
+		processSpan.RecordError(err)
+		processSpan.End()
 		return nil, fmt.Errorf("error parsing response: %w", err)
 	}
 
-	log.Debug().
-		Int("content_length", len(inferenceResp.Content)).
-		Str("model", inferenceResp.Model).
-		Str("stop_reason", inferenceResp.StopReason).
-		Interface("usage", inferenceResp.Usage).
-		Msg("Successfully parsed inference response")
+	// Add response metadata to span
+	processSpan.SetAttributes(
+		attribute.Int("response.token_count", inferenceResp.Usage.InputTokens+inferenceResp.Usage.OutputTokens),
+		attribute.String("response.stop_reason", inferenceResp.StopReason),
+	)
 
 	var toolOutput interface{}
 	for _, content := range inferenceResp.Content {
-
 		if content.Type == "tool_use" {
 			toolOutput = content.Input
-			log.Debug().
-				Interface("tool_output", toolOutput).
-				Msg("Found tool output in response")
 			break
 		}
 	}
 
 	if toolOutput == nil {
-		log.Error().Msg("No structured output found in response")
+		processSpan.RecordError(fmt.Errorf("no structured output found"))
+		processSpan.End()
 		return nil, fmt.Errorf("no structured output found in response")
 	}
 
-	// Validate the tool output against the schema
+	// Validate output with tracing
+	_, validateSpan := c.tracer.Start(ctx, "validate_output")
 	if err := validateAgainstSchema(toolOutput, params.Schema); err != nil {
-		log.Error().
-			Err(err).
-			Interface("tool_output", toolOutput).
-			Msg("Response validation failed")
+		validateSpan.RecordError(err)
+		validateSpan.End()
+		processSpan.End()
 		return nil, fmt.Errorf("response validation failed: %w", err)
 	}
+	validateSpan.End()
 
 	contentMap, ok := toolOutput.(map[string]interface{})
 	if !ok {
-		log.Error().
-			Interface("tool_output", toolOutput).
-			Msg("Unexpected response format")
+		processSpan.RecordError(fmt.Errorf("unexpected response format"))
+		processSpan.End()
 		return nil, fmt.Errorf("unexpected response format")
 	}
 
-	log.Info().
-		Int("fields_count", len(contentMap)).
-		Msg("Successfully processed Claude inference request")
-
+	processSpan.End()
 	return contentMap, nil
 }

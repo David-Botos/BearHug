@@ -1,12 +1,16 @@
 package structOutputs
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/inference"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // TableName represents valid table names in the system
@@ -166,54 +170,102 @@ type IdentifiedDetails struct {
 	Reasoning          []string `json:"reasoning"`
 }
 
-//TODO: no need for a pointer here
-func IdentifyDetailsForTriagedAnalysis(transcript string) (*IdentifiedDetails, error) {
+// TODO: no need for a pointer here
+func IdentifyDetailsForTriagedAnalysis(ctx context.Context, transcript string) (*IdentifiedDetails, error) {
+	tracer := otel.GetTracerProvider().Tracer("details-identifier")
+	ctx, span := tracer.Start(ctx, "identify_details_for_triage",
+		trace.WithAttributes(
+			attribute.Int("transcript_length", len(transcript)),
+		),
+	)
+	defer span.End()
+
+	// Generate prompt with tracing
+	ctx, promptSpan := tracer.Start(ctx, "generate_triage_prompt")
 	log.Debug().Msg("Generating triage prompt and schema")
 	detailTriagePrompt, detailTriageSchema := GenerateTriagePrompt(transcript)
+	promptSpan.SetAttributes(
+		attribute.Int("prompt_length", len(detailTriagePrompt)),
+		attribute.Int("schema_properties", len(detailTriageSchema.Properties)),
+	)
+	promptSpan.End()
 
-	// Initialize Claude Inference Client
+	// Initialize Claude Inference Client with tracing
+	ctx, clientSpan := tracer.Start(ctx, "init_inference_client")
 	client, err := inference.InitInferenceClient()
 	if err != nil {
+		clientSpan.RecordError(err)
+		clientSpan.End()
 		log.Error().
 			Err(err).
 			Msg("Failed to initialize inference client")
 		return nil, fmt.Errorf("failed to initialize inference client: %w", err)
 	}
+	clientSpan.End()
 
-	// Run inference
+	// Log preparation for inference
 	log.Debug().
 		Int("prompt_length", len(detailTriagePrompt)).
 		Bool("schema_present", len(detailTriageSchema.Properties) > 0).
 		Msg("Running Claude inference for detail identification")
 
-	serviceDetailsRes, serviceDetailsErr := client.RunClaudeInference(inference.PromptParams{
+	// Run inference - Note that RunClaudeInference has its own internal tracing
+	serviceDetailsRes, serviceDetailsErr := client.RunClaudeInference(ctx, inference.PromptParams{
 		Prompt: detailTriagePrompt,
 		Schema: detailTriageSchema,
 	})
 	if serviceDetailsErr != nil {
+		span.RecordError(serviceDetailsErr)
 		log.Error().
 			Err(serviceDetailsErr).
 			Msg("Claude inference failed during detail identification")
 		return nil, fmt.Errorf("error with details identification: %w", serviceDetailsErr)
 	}
 
-	// Convert the map to JSON bytes first
+	// Process response with tracing
+	ctx, processSpan := tracer.Start(ctx, "process_inference_response")
 	jsonBytes, err := json.Marshal(serviceDetailsRes)
 	if err != nil {
+		processSpan.RecordError(err)
+		processSpan.End()
 		log.Error().
 			Err(err).
 			Msg("Failed to marshal response map to JSON")
 		return nil, fmt.Errorf("failed to marshal response map: %w", err)
 	}
 
-	// Unmarshal JSON bytes into our struct
 	var details IdentifiedDetails
 	if err := json.Unmarshal(jsonBytes, &details); err != nil {
+		processSpan.RecordError(err)
+		processSpan.End()
 		log.Error().
 			Err(err).
 			Msg("Failed to unmarshal Claude inference response")
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
+	// Add result metrics to process span
+	processSpan.SetAttributes(
+		attribute.Int("detected_categories", len(details.DetectedCategories)),
+		attribute.Int("reasoning_count", len(details.Reasoning)),
+	)
+	processSpan.End()
+
+	// Add overall results to main span
+	span.SetAttributes(
+		attribute.Int("total_categories_detected", len(details.DetectedCategories)),
+		attribute.Bool("has_capacity_category", containsCategory(details.DetectedCategories, "capacity")),
+	)
+
 	return &details, nil
+}
+
+// Helper function to check for specific categories
+func containsCategory(categories []string, target string) bool {
+	for _, category := range categories {
+		if strings.ToLower(category) == target {
+			return true
+		}
+	}
+	return false
 }

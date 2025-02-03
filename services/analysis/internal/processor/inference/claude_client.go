@@ -4,19 +4,25 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Client represents an Anthropic API client
 type ClaudeClient struct {
 	apiKey     string
 	httpClient *http.Client
+	tracer     trace.Tracer
 }
 
 // NewClient creates a new Anthropic API client
 func NewClient(apiKey string) *ClaudeClient {
+	tracer := otel.GetTracerProvider().Tracer("claude-client")
 	return &ClaudeClient{
 		apiKey:     apiKey,
 		httpClient: &http.Client{},
+		tracer:     tracer,
 	}
 }
 

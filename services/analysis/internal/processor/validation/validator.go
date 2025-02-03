@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -319,7 +320,10 @@ func fixOutputWithInference(
 	}
 
 	// 4. Get fixes from Claude
-	fixOutput, err := client.RunClaudeInference(inference.PromptParams{
+	// todo implement telemetry context correctly
+	ctx := context.Background()
+	// this is incorrect and just to prevent errors
+	fixOutput, err := client.RunClaudeInference(ctx, inference.PromptParams{
 		Prompt: fixPrompt,
 		Schema: fixSchema,
 	})

@@ -1,0 +1,21 @@
+# docker-compose.yaml
+networks:
+  microservices_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8500:8500"
+    networks:
+      - microservices_net
+    environment:
+      - DOCKER_ENVIRONMENT=true
+      - PORT=8500

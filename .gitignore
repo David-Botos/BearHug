@@ -143,3 +143,7 @@ data/
 credentials.json
 config.local.yaml
 secrets.yaml
+
+# Docker Override
+docker-compose.override.yaml
+**/docker-compose.override.yaml

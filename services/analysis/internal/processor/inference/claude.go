@@ -7,9 +7,12 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
+	"time"
 
 	env "github.com/david-botos/BearHug/services/analysis/pkg/ENV"
 	"github.com/david-botos/BearHug/services/analysis/pkg/logger"
+	"github.com/rs/zerolog"
 )
 
 type PromptParams struct {
@@ -100,12 +103,39 @@ func InitInferenceClient() (*ClaudeClient, error) {
 // RunClaudeInference performs inference with structured output validation
 func (c *ClaudeClient) RunClaudeInference(params PromptParams) (map[string]interface{}, error) {
 	log := logger.Get()
+	maxRetries := 2
+	retryDelay := 10 * time.Second
+
+	var lastErr error
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		if attempt > 0 {
+			log.Info().
+				Int("attempt", attempt).
+				Dur("delay", retryDelay).
+				Msg("Retrying Claude API request after delay")
+			time.Sleep(retryDelay)
+		}
+
+		response, err := c.makeInferenceRequest(params, log)
+		if err != nil {
+			lastErr = err
+			if isOverburdenedError(err) && attempt < maxRetries {
+				continue
+			}
+			return nil, err
+		}
+		return response, nil
+	}
+
+	return nil, fmt.Errorf("anthropic API is overburdened: %w", lastErr)
+}
+
+func (c *ClaudeClient) makeInferenceRequest(params PromptParams, log *zerolog.Logger) (map[string]interface{}, error) {
 	log.Debug().
 		Str("model", "claude-3-5-sonnet-20241022").
 		Int("max_tokens", 1500).
 		Msg("Starting Claude inference request")
 
-	// Create request body
 	reqBody := TriagePromptRequest{
 		Model:     "claude-3-5-sonnet-20241022",
 		MaxTokens: 1500,
@@ -124,25 +154,18 @@ func (c *ClaudeClient) RunClaudeInference(params PromptParams) (map[string]inter
 		},
 	}
 
-	// Marshal the request body
 	jsonData, err := json.Marshal(reqBody)
 	if err != nil {
-		log.Error().
-			Err(err).
-			Msg("Failed to marshal request body")
+		log.Error().Err(err).Msg("Failed to marshal request body")
 		return nil, fmt.Errorf("error marshaling request: %w", err)
 	}
 
-	// Create request
 	req, err := http.NewRequest("POST", "https://api.anthropic.com/v1/messages", bytes.NewBuffer(jsonData))
 	if err != nil {
-		log.Error().
-			Err(err).
-			Msg("Failed to create HTTP request")
+		log.Error().Err(err).Msg("Failed to create HTTP request")
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
 
-	// Set headers
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("x-api-key", c.apiKey)
 	req.Header.Set("anthropic-version", "2023-06-01")
@@ -152,15 +175,16 @@ func (c *ClaudeClient) RunClaudeInference(params PromptParams) (map[string]inter
 		Str("url", req.URL.String()).
 		Msg("Sending request to Claude API")
 
-	// Make request
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		log.Error().
-			Err(err).
-			Msg("Failed to execute HTTP request")
+		log.Error().Err(err).Msg("Failed to execute HTTP request")
 		return nil, fmt.Errorf("error making request: %w", err)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode == 529 {
+		return nil, fmt.Errorf("received status code 529")
+	}
 
 	log.Debug().
 		Int("status_code", resp.StatusCode).
@@ -168,13 +192,10 @@ func (c *ClaudeClient) RunClaudeInference(params PromptParams) (map[string]inter
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Error().
-			Err(err).
-			Msg("Failed to read response body")
+		log.Error().Err(err).Msg("Failed to read response body")
 		return nil, fmt.Errorf("error reading response: %w", err)
 	}
 
-	// Parse response
 	var inferenceResp InferenceResponse
 	if err := json.Unmarshal(body, &inferenceResp); err != nil {
 		log.Error().
@@ -193,7 +214,6 @@ func (c *ClaudeClient) RunClaudeInference(params PromptParams) (map[string]inter
 
 	var toolOutput interface{}
 	for _, content := range inferenceResp.Content {
-
 		if content.Type == "tool_use" {
 			toolOutput = content.Input
 			log.Debug().
@@ -208,7 +228,6 @@ func (c *ClaudeClient) RunClaudeInference(params PromptParams) (map[string]inter
 		return nil, fmt.Errorf("no structured output found in response")
 	}
 
-	// Validate the tool output against the schema
 	if err := validateAgainstSchema(toolOutput, params.Schema); err != nil {
 		log.Error().
 			Err(err).
@@ -230,4 +249,8 @@ func (c *ClaudeClient) RunClaudeInference(params PromptParams) (map[string]inter
 		Msg("Successfully processed Claude inference request")
 
 	return contentMap, nil
+}
+
+func isOverburdenedError(err error) bool {
+	return strings.Contains(err.Error(), "529")
 }

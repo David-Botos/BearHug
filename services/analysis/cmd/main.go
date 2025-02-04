@@ -165,7 +165,7 @@ func main() {
 	http.HandleFunc("/transcript", handleTranscript)
 	http.HandleFunc("/test", handleTest)
 
-	port := "8080"
+	port := "8500"
 	log.Info().
 		Str("port", port).
 		Msg("Starting HTTP server")

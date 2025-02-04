@@ -12,11 +12,10 @@ import (
 // InitSupabaseClient initializes the Supabase client
 func InitSupabaseClient() (*supabase.Client, error) {
 	log := logger.Get()
+	log.Info().Msg("Initializing Supabase client")
 	if err := env.LoadEnvFile(); err != nil {
 		return nil, err
 	}
-
-	log.Debug().Str("environment", os.Getenv("ENVIRONMENT")).Msg("Current environment")
 
 	supabaseURL := os.Getenv("SUPABASE_URL")
 	supabaseKey := os.Getenv("SUPABASE_KEY")

@@ -93,8 +93,8 @@ func FetchOrganizationServices(organizationID string) ([]hsds_types.Service, err
 	}
 
 	// Unmarshal the byte array into the services slice
-	if err := json.Unmarshal(data, &services); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal services data: %w", err)
+	if err := hsds_types.UnmarshalJSONWithTime(data, &services); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal services: %w", err)
 	}
 
 	return services, nil
@@ -129,8 +129,8 @@ func FetchUnits() ([]hsds_types.Unit, error) {
 	}
 
 	// Unmarshal the byte array into the units slice
-	if err := json.Unmarshal(data, &units); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal units data: %w", err)
+	if err := hsds_types.UnmarshalJSONWithTime(data, &units); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal units: %w", err)
 	}
 
 	return units, nil
@@ -174,110 +174,70 @@ func FetchOrgContacts(org_id string) ([]hsds_types.Contact, error) {
 		Str("raw_data", string(data)).
 		Msg("Retrieved contacts data")
 
-	if err := json.Unmarshal(data, &contacts); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal orgContacts data: %w", err)
+	if err := hsds_types.UnmarshalJSONWithTime(data, &contacts); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal contacts: %w", err)
 	}
 
 	return contacts, nil
 }
 
-func FetchRelevantPhones(org_id string, contactIDs []string, serviceIDs []string) ([]hsds_types.Phone, error) {
+func fetchPhones(field string, value interface{}) ([]byte, error) {
+	phoneFields := `
+        id,
+        location_id,
+        service_id,
+        organization_id,
+        contact_id,
+        service_at_location_id,
+        number,
+        extension,
+        type,
+        description,
+        created_at,
+        updated_at
+    `
+
 	client, initErr := InitSupabaseClient()
 	if initErr != nil {
-		return nil, fmt.Errorf("failed to initialize Supabase client: %w", initErr)
+		return nil, fmt.Errorf("error when initializing supa: %w", initErr)
 	}
 
-	// get phones by org id
-	orgPhones, _, err := client.From("phone").Select(`
-        id,
-        location_id,
-        service_id,
-        organization_id,
-        contact_id,
-        service_at_location_id,
-        number,
-        extension,
-        type,
-        description,
-		created_at,
-    	updated_at
-        `, "", false).Eq("organization_id", org_id).Execute()
+	query := client.From("phone").Select(phoneFields, "", false)
 
+	switch v := value.(type) {
+	case string:
+		query = query.Eq(field, v)
+	case []string:
+		query = query.In(field, v)
+	default:
+		return nil, fmt.Errorf("unsupported value type for field %s", field)
+	}
+
+	data, _, err := query.Execute()
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch phones: %w", err)
+		return nil, fmt.Errorf("fetching phones by %s: %w", field, err)
 	}
+	return data, nil
+}
 
-	// get phones by contact IDs
-	contactPhones, _, err := client.From("phone").Select(`
-        id,
-        location_id,
-        service_id,
-        organization_id,
-        contact_id,
-        service_at_location_id,
-        number,
-        extension,
-        type,
-        description,
-		created_at,
-    	updated_at
-        `, "", false).In("contact_id", contactIDs).Execute()
+func FetchRelevantPhones(org_id string, contactIDs []string, serviceIDs []string) ([]hsds_types.Phone, error) {
 
+	orgPhones, err := fetchPhones("organization_id", org_id)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch phones by contact IDs: %w", err)
-	}
-
-	// get phones by service IDs
-	servicePhones, _, err := client.From("phone").Select(`
-        id,
-        location_id,
-        service_id,
-        organization_id,
-        contact_id,
-        service_at_location_id,
-        number,
-        extension,
-        type,
-        description,
-		created_at,
-    	updated_at
-        `, "", false).In("service_id", serviceIDs).Execute()
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch phones by service IDs: %w", err)
-	}
-
-	// Create a map to store unique phone entries
-	uniquePhones := make(map[string]hsds_types.Phone)
-
-	// Helper function to unmarshal and add phones to the map
-	addToUniquePhones := func(data []byte) error {
-		var phones []hsds_types.Phone
-		if err := json.Unmarshal(data, &phones); err != nil {
-			return fmt.Errorf("failed to unmarshal phones: %w", err)
-		}
-		for _, phone := range phones {
-			uniquePhones[phone.ID] = phone
-		}
-		return nil
-	}
-
-	// Add all phone results to the map
-	if err := addToUniquePhones(orgPhones); err != nil {
-		return nil, err
-	}
-	if err := addToUniquePhones(contactPhones); err != nil {
-		return nil, err
-	}
-	if err := addToUniquePhones(servicePhones); err != nil {
 		return nil, err
 	}
 
-	// Convert map values back to slice
-	result := make([]hsds_types.Phone, 0, len(uniquePhones))
-	for _, phone := range uniquePhones {
-		result = append(result, phone)
+	contactPhones, err := fetchPhones("contact_id", contactIDs)
+	if err != nil {
+		return nil, err
 	}
 
-	return result, nil
+	servicePhones, err := fetchPhones("service_id", serviceIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	return hsds_types.UnmarshalMultipleJSONResponses[hsds_types.Phone](
+		[][]byte{orgPhones, contactPhones, servicePhones},
+	)
 }

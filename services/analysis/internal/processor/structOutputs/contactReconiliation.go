@@ -1,20 +1,26 @@
 package structOutputs
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/david-botos/BearHug/services/analysis/internal/hsds_types"
 	"github.com/david-botos/BearHug/services/analysis/pkg/logger"
 )
 
+// contactMatch represents a match between inferred and existing data
 type contactMatch struct {
 	InferredContact contactInference
 	ExistingContact *hsds_types.Contact
 	ExistingPhone   *hsds_types.Phone
 	MatchConfidence float64
-	MatchType       string // "phone", "email", "name", or "multiple"
+	MatchType       string // "phone_and_name", "shared_phone", "orphaned_phone", "email", "name"
+	NeedsNewPhone   bool   // Should create new phone record
+	NeedsNewContact bool   // Should create new contact despite phone match
+	UpdatePhone     bool   // Should update existing phone record with new details
 }
 
+// matchResult holds the results of the matching process
 type matchResult struct {
 	Matches         []contactMatch
 	UnmatchedInf    []contactInference
@@ -24,18 +30,30 @@ type matchResult struct {
 	NewPhones       []*hsds_types.Phone
 }
 
-// buildLookupMaps creates efficient lookup structures for matching
+// phoneMapping represents the relationship between a phone number and its associated contacts
+type phoneMapping struct {
+	phone    *hsds_types.Phone     // The phone record from the database
+	contacts []*hsds_types.Contact // All contacts associated with this phone number
+}
+
+// buildLookupMaps creates efficient lookup structures for contact matching operations.
+// It handles cases where:
+// 1. Multiple contacts share the same phone number
+// 2. A single contact has multiple phone numbers
+// 3. Phone numbers exist without associated contacts (orphaned)
+// 4. Contacts exist with only email addresses
 func buildLookupMaps(orgContacts []hsds_types.Contact, relevantPhones []hsds_types.Phone) (
-	phoneToContact map[string]*hsds_types.Contact,
-	emailToContact map[string]*hsds_types.Contact,
-	phoneDetails map[string]*hsds_types.Phone,
+	phoneToContacts map[string]phoneMapping, // Maps normalized phone numbers to their contacts
+	emailToContact map[string]*hsds_types.Contact, // Maps lowercase emails to contacts
 ) {
 	log := logger.Get()
-	phoneToContact = make(map[string]*hsds_types.Contact)
-	emailToContact = make(map[string]*hsds_types.Contact)
-	phoneDetails = make(map[string]*hsds_types.Phone)
 
-	// Build email to contact mapping
+	// Initialize maps
+	phoneToContacts = make(map[string]phoneMapping)
+	emailToContact = make(map[string]*hsds_types.Contact)
+
+	// First pass: Build email-to-contact mapping
+	// This is separate from phone mapping as email matches are handled differently
 	for i := range orgContacts {
 		contact := &orgContacts[i]
 		if contact.Email != nil && *contact.Email != "" {
@@ -44,44 +62,90 @@ func buildLookupMaps(orgContacts []hsds_types.Contact, relevantPhones []hsds_typ
 			log.Debug().
 				Str("email", normalizedEmail).
 				Str("contact_id", contact.ID).
-				Str("name", *contact.Name).
+				Str("name", getStringValue(contact.Name)).
 				Msg("Added email to contact mapping")
 		}
 	}
 
-	// Build phone mappings
+	// Second pass: Build phone mappings
+	// Handle both contact-to-phone relationships and orphaned phones
 	for i := range relevantPhones {
 		phone := &relevantPhones[i]
-
-		// Normalize phone number for consistent matching
 		normalizedPhone := normalizePhoneNumber(phone.Number)
-		phoneDetails[normalizedPhone] = phone
 
-		// If phone is associated with a contact, create the mapping
+		// Initialize or retrieve existing mapping
+		mapping := phoneToContacts[normalizedPhone]
+		mapping.phone = phone
+
+		// If phone is associated with a contact, find and store the relationship
 		if phone.ContactID != nil {
 			for i := range orgContacts {
 				if orgContacts[i].ID == *phone.ContactID {
-					phoneToContact[normalizedPhone] = &orgContacts[i]
-					break
+					// Add to contacts slice if not already present
+					contactExists := false
+					for _, existingContact := range mapping.contacts {
+						if existingContact.ID == orgContacts[i].ID {
+							contactExists = true
+							break
+						}
+					}
+					if !contactExists {
+						mapping.contacts = append(mapping.contacts, &orgContacts[i])
+						log.Debug().
+							Str("phone", normalizedPhone).
+							Str("contact_id", orgContacts[i].ID).
+							Str("name", getStringValue(orgContacts[i].Name)).
+							Msg("Added phone to contact mapping")
+					}
 				}
 			}
+		} else {
+			log.Debug().
+				Str("phone", normalizedPhone).
+				Msg("Found orphaned phone number")
 		}
+
+		// Update the mapping in the main map
+		phoneToContacts[normalizedPhone] = mapping
 	}
 
-	// Log the final map contents
+	// Log final mapping stats
 	log.Debug().
-		Int("phone_map_size", len(phoneToContact)).
-		Interface("phone_map", phoneToContact).
+		Int("phone_map_size", len(phoneToContacts)).
 		Int("email_map_size", len(emailToContact)).
-		Interface("email_map", emailToContact).
-		Msg("Built mapping")
+		Msg("Built lookup maps")
 
-	return phoneToContact, emailToContact, phoneDetails
+	// Detailed debug logging of phone mappings
+	for phone, mapping := range phoneToContacts {
+		contactIDs := make([]string, 0, len(mapping.contacts))
+		for _, contact := range mapping.contacts {
+			contactIDs = append(contactIDs, contact.ID)
+		}
+		log.Debug().
+			Str("phone", phone).
+			Strs("contact_ids", contactIDs).
+			Msg("Phone mapping details")
+	}
+
+	return phoneToContacts, emailToContact
 }
 
-// findMatches identifies if mentioned contacts already exist in the database
-// by checking phone, email, and name matches
-func findMatches(mentionedContacts contactInfOutput,
+// getStringValue safely retrieves string value from pointer
+func getStringValue(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+// FindMatches identifies relationships between inferred contacts from conversation transcripts
+// and existing database records. It handles several complex scenarios:
+// 1. Multiple contacts sharing the same phone number
+// 2. Single contacts having multiple phone numbers
+// 3. Phone numbers without associated contacts (orphaned)
+// 4. Pure name matches without phone/email correlation
+// 5. Email-only contacts
+func FindMatches(mentionedContacts contactInfOutput,
 	orgContacts []hsds_types.Contact,
 	relevantPhones []hsds_types.Phone) matchResult {
 
@@ -90,107 +154,177 @@ func findMatches(mentionedContacts contactInfOutput,
 		UnmatchedInf: make([]contactInference, 0),
 	}
 
-	phoneToContact, emailToContact, phoneDetails := buildLookupMaps(orgContacts, relevantPhones)
-	log := logger.Get()
+	// Build lookup structures for efficient matching
+	phoneToContacts, emailToContact := buildLookupMaps(orgContacts, relevantPhones)
 
+	// Process each contact mentioned in the transcript
 	for _, mentionedContact := range mentionedContacts.Contacts {
-		// Track all matches found for this contact
-		var matches []contactMatch
-
-		// Check phone match
-		if mentionedContact.Phone != nil {
-			normalizedPhone := normalizePhoneNumber(*mentionedContact.Phone)
-			if existingPhone, exists := phoneDetails[normalizedPhone]; exists {
-				if existingContact, hasContact := phoneToContact[normalizedPhone]; hasContact {
-					matches = append(matches, contactMatch{
-						InferredContact: mentionedContact,
-						ExistingContact: existingContact,
-						ExistingPhone:   existingPhone,
-						MatchType:       "phone",
-					})
-				}
-			}
-		}
-
-		// Check email match
-		if mentionedContact.Email != nil {
-			normalizedEmail := strings.ToLower(*mentionedContact.Email)
-			if existingContact, exists := emailToContact[normalizedEmail]; exists {
-				matches = append(matches, contactMatch{
-					InferredContact: mentionedContact,
-					ExistingContact: existingContact,
-					MatchType:       "email",
-				})
-			}
-		}
-
-		// Check name match if threshold met
-		if match := findBestNameMatch(mentionedContact, orgContacts); match != nil {
-			matches = append(matches, *match)
-		}
-
-		// Analyze matches found
-		switch len(matches) {
-		case 0:
-			// No matches - this is a new contact
-			result.UnmatchedInf = append(result.UnmatchedInf, mentionedContact)
-			log.Debug().
-				Interface("contact", mentionedContact).
-				Msg("No matches found - treating as new contact")
-
-		case 1:
-			// Single match - straightforward case
-			result.Matches = append(result.Matches, matches[0])
-			log.Debug().
-				Interface("contact", mentionedContact).
-				Str("match_type", matches[0].MatchType).
-				Msg("Single match found")
-
-		default:
-			// Multiple matches - do they point to the same contact?
-			if allMatchesSameContact(matches) {
-				// All matches reference same contact - use the most complete match
-				result.Matches = append(result.Matches, getBestMatch(matches))
-				log.Debug().
-					Interface("contact", mentionedContact).
-					Int("match_count", len(matches)).
-					Msg("Multiple matches to same contact")
-			} else {
-				// Conflicting matches - log warning and treat as new contact
-				log.Warn().
-					Interface("contact", mentionedContact).
-					Interface("matches", matches).
-					Msg("Conflicting matches found - treating as new contact")
-				result.UnmatchedInf = append(result.UnmatchedInf, mentionedContact)
-			}
-		}
+		matches := findMatchesForContact(mentionedContact, phoneToContacts, emailToContact, orgContacts)
+		processMatches(matches, mentionedContact, &result)
 	}
 
 	return result
 }
 
-// allMatchesSameContact checks if all matches reference the same contact
-func allMatchesSameContact(matches []contactMatch) bool {
-	if len(matches) <= 1 {
-		return true
-	}
-	firstID := matches[0].ExistingContact.ID
-	for _, match := range matches[1:] {
-		if match.ExistingContact.ID != firstID {
-			return false
+// findMatchesForContact attempts to find all possible matches for a single mentioned contact
+// Returns matches ordered by confidence (highest first)
+func findMatchesForContact(
+	mentionedContact contactInference,
+	phoneToContacts map[string]phoneMapping,
+	emailToContact map[string]*hsds_types.Contact,
+	orgContacts []hsds_types.Contact) []contactMatch {
+
+	var matches []contactMatch
+	log := logger.Get()
+
+	// Step 1: Check for phone matches
+	if mentionedContact.Phone != nil {
+		normalizedPhone := normalizePhoneNumber(*mentionedContact.Phone)
+		if mapping, exists := phoneToContacts[normalizedPhone]; exists {
+			// Phone exists in system - check all associated contacts
+			if len(mapping.contacts) > 0 {
+				for _, existingContact := range mapping.contacts {
+					similarity := 0.0
+					if existingContact.Name != nil {
+						similarity = calculateNameSimilarity(mentionedContact.Name, *existingContact.Name)
+					}
+
+					match := contactMatch{
+						InferredContact: mentionedContact,
+						ExistingContact: existingContact,
+						ExistingPhone:   mapping.phone,
+						MatchConfidence: similarity,
+					}
+
+					// Determine match type and confidence based on name similarity
+					if similarity > 0.8 {
+						match.MatchType = "phone_and_name"
+						match.UpdatePhone = true // Update phone details as this is recent data
+					} else {
+						// Phone matches but name differs significantly
+						// Flag for new contact creation despite shared phone
+						match.MatchType = "shared_phone"
+						match.NeedsNewContact = true
+					}
+
+					matches = append(matches, match)
+					log.Debug().
+						Str("phone", normalizedPhone).
+						Str("existing_name", getStringValue(existingContact.Name)).
+						Str("mentioned_name", mentionedContact.Name).
+						Float64("similarity", similarity).
+						Str("match_type", match.MatchType).
+						Msg("Found phone-based match")
+				}
+			} else {
+				// Orphaned phone case
+				matches = append(matches, contactMatch{
+					InferredContact: mentionedContact,
+					ExistingPhone:   mapping.phone,
+					MatchType:       "orphaned_phone",
+					MatchConfidence: 1.0,
+					NeedsNewContact: true,
+				})
+				log.Debug().
+					Str("phone", normalizedPhone).
+					Msg("Found orphaned phone match")
+			}
 		}
 	}
-	return true
+
+	// Step 2: Check for email matches if no high-confidence phone matches
+	if mentionedContact.Email != nil && !hasHighConfidenceMatch(matches) {
+		normalizedEmail := strings.ToLower(*mentionedContact.Email)
+		if existingContact, exists := emailToContact[normalizedEmail]; exists {
+			matches = append(matches, contactMatch{
+				InferredContact: mentionedContact,
+				ExistingContact: existingContact,
+				MatchType:       "email",
+				MatchConfidence: 1.0,
+				NeedsNewPhone:   mentionedContact.Phone != nil, // Create new phone if mentioned
+			})
+			log.Debug().
+				Str("email", normalizedEmail).
+				Str("name", getStringValue(existingContact.Name)).
+				Msg("Found email match")
+		}
+	}
+
+	// Step 3: Check for name-only matches if no other matches found
+	if len(matches) == 0 {
+		if nameMatch := findBestNameMatch(mentionedContact, orgContacts); nameMatch != nil {
+			nameMatch.NeedsNewPhone = mentionedContact.Phone != nil
+			matches = append(matches, *nameMatch)
+			log.Debug().
+				Str("mentioned_name", mentionedContact.Name).
+				Str("matched_name", getStringValue(nameMatch.ExistingContact.Name)).
+				Float64("confidence", nameMatch.MatchConfidence).
+				Msg("Found name-only match")
+		}
+	}
+
+	// Sort matches by confidence, descending
+	sort.Slice(matches, func(i, j int) bool {
+		return matches[i].MatchConfidence > matches[j].MatchConfidence
+	})
+
+	return matches
 }
 
-// getBestMatch selects the most complete match (e.g., one with phone info if available)
-func getBestMatch(matches []contactMatch) contactMatch {
-	for _, match := range matches {
-		if match.ExistingPhone != nil {
-			return match
+// processMatches handles the results of finding matches for a contact
+func processMatches(matches []contactMatch, mentionedContact contactInference, result *matchResult) {
+	log := logger.Get()
+
+	switch len(matches) {
+	case 0:
+		// No matches - treat as new contact
+		result.UnmatchedInf = append(result.UnmatchedInf, mentionedContact)
+		log.Debug().
+			Interface("contact", mentionedContact).
+			Msg("No matches found - treating as new contact")
+
+	case 1:
+		// Single match - straightforward case
+		result.Matches = append(result.Matches, matches[0])
+		log.Debug().
+			Interface("contact", mentionedContact).
+			Str("match_type", matches[0].MatchType).
+			Float64("confidence", matches[0].MatchConfidence).
+			Bool("needs_new_phone", matches[0].NeedsNewPhone).
+			Bool("needs_new_contact", matches[0].NeedsNewContact).
+			Msg("Single match processed")
+
+	default:
+		// Multiple matches - use highest confidence match if it's significantly better
+		bestMatch := matches[0]
+		secondBestConfidence := matches[1].MatchConfidence
+
+		if bestMatch.MatchConfidence > secondBestConfidence+0.2 { // Significant confidence gap
+			result.Matches = append(result.Matches, bestMatch)
+			log.Debug().
+				Interface("contact", mentionedContact).
+				Float64("best_confidence", bestMatch.MatchConfidence).
+				Float64("second_best", secondBestConfidence).
+				Msg("Selected best match from multiple")
+		} else {
+			// Confidence difference too small - treat as new contact
+			result.UnmatchedInf = append(result.UnmatchedInf, mentionedContact)
+			log.Debug().
+				Interface("contact", mentionedContact).
+				Interface("matches", matches).
+				Msg("Ambiguous matches - treating as new contact")
 		}
 	}
-	return matches[0]
+}
+
+// hasHighConfidenceMatch checks if there's already a high-confidence match
+func hasHighConfidenceMatch(matches []contactMatch) bool {
+	for _, match := range matches {
+		if match.MatchConfidence > 0.8 {
+			return true
+		}
+	}
+	return false
 }
 
 // calculateNameSimilarity implements the Levenshtein distance calculation

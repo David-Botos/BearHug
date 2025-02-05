@@ -209,133 +209,269 @@ func CreateNewContactAndPhoneRecords(unmatchedResults []contactInference, org_id
 	return newContacts, newPhones, nil
 }
 
+// UpdateExistingContact handles updating contact records and associated phone records
+// based on matches found between inferred data and existing database records.
 func UpdateExistingContact(match contactMatch, call_id string) error {
 	log := logger.Get()
 	log.Info().
 		Str("contact_id", match.ExistingContact.ID).
-		Str("contact_name", getStringValue(match.ExistingContact.Name)).
-		Msg("Starting contact update")
+		Str("match_type", match.MatchType).
+		Bool("needs_new_phone", match.NeedsNewPhone).
+		Msg("Starting contact update process")
 
 	client, err := supabase.InitSupabaseClient()
 	if err != nil {
-		log.Error().
-			Err(err).
-			Msg("Failed to initialize Supabase client")
 		return fmt.Errorf("failed to initialize Supabase client: %w", err)
 	}
 
-	// Initialize update data and metadata inputs
-	updateData := make(map[string]interface{})
+	// Track all metadata changes
 	var metadataInputs []supabase.MetadataInput
 
-	// Check and update Name if different
-	if match.InferredContact.Name != "" &&
-		(match.ExistingContact.Name == nil || match.InferredContact.Name != *match.ExistingContact.Name) {
-		updateData["name"] = match.InferredContact.Name
-		metadataInputs = append(metadataInputs, supabase.MetadataInput{
-			ResourceID:       match.ExistingContact.ID,
-			CallID:           call_id,
-			ResourceType:     "contact",
-			FieldName:        "name",
-			PreviousValue:    getStringValue(match.ExistingContact.Name),
-			ReplacementValue: match.InferredContact.Name,
-			LastActionType:   "UPDATE",
-		})
-	}
+	// 1. Handle Contact Updates
+	if updateData := buildContactUpdateData(match); len(updateData) > 0 {
+		// Prepare metadata for contact changes
+		metadataInputs = append(metadataInputs, buildContactMetadata(match, call_id, updateData)...)
 
-	// Check and update Title if different
-	if match.InferredContact.Title != nil &&
-		(match.ExistingContact.Title == nil || *match.InferredContact.Title != *match.ExistingContact.Title) {
-		updateData["title"] = *match.InferredContact.Title
-		metadataInputs = append(metadataInputs, supabase.MetadataInput{
-			ResourceID:       match.ExistingContact.ID,
-			CallID:           call_id,
-			ResourceType:     "contact",
-			FieldName:        "title",
-			PreviousValue:    getStringValue(match.ExistingContact.Title),
-			ReplacementValue: *match.InferredContact.Title,
-			LastActionType:   "UPDATE",
-		})
-	}
-
-	// Check and update Department if different
-	if match.InferredContact.Department != nil &&
-		(match.ExistingContact.Department == nil || *match.InferredContact.Department != *match.ExistingContact.Department) {
-		updateData["department"] = *match.InferredContact.Department
-		metadataInputs = append(metadataInputs, supabase.MetadataInput{
-			ResourceID:       match.ExistingContact.ID,
-			CallID:           call_id,
-			ResourceType:     "contact",
-			FieldName:        "department",
-			PreviousValue:    getStringValue(match.ExistingContact.Department),
-			ReplacementValue: *match.InferredContact.Department,
-			LastActionType:   "UPDATE",
-		})
-	}
-
-	// Check and update Email if different
-	if match.InferredContact.Email != nil &&
-		(match.ExistingContact.Email == nil || *match.InferredContact.Email != *match.ExistingContact.Email) {
-		updateData["email"] = *match.InferredContact.Email
-		metadataInputs = append(metadataInputs, supabase.MetadataInput{
-			ResourceID:       match.ExistingContact.ID,
-			CallID:           call_id,
-			ResourceType:     "contact",
-			FieldName:        "email",
-			PreviousValue:    getStringValue(match.ExistingContact.Email),
-			ReplacementValue: *match.InferredContact.Email,
-			LastActionType:   "UPDATE",
-		})
-	}
-
-	// If there are no updates needed, return early
-	if len(updateData) == 0 {
-		log.Info().
-			Str("contact_id", match.ExistingContact.ID).
-			Msg("No updates needed for contact")
-		return nil
-	}
-
-	// Update the contact in Supabase
-	data, _, err := client.From("contact").
-		Update(updateData, "", "").
-		Eq("id", match.ExistingContact.ID).
-		Execute()
-	if err != nil {
-		log.Error().
-			Err(err).
-			Str("contact_id", match.ExistingContact.ID).
-			Str("response_data", string(data)).
-			Msg("Failed to update contact")
-		return fmt.Errorf("failed to update contact %s: %w, data: %s",
-			match.ExistingContact.ID, err, string(data))
-	}
-
-	// Create metadata entries for all changes if there are any
-	if len(metadataInputs) > 0 {
-		if err := supabase.CreateAndStoreMetadata(metadataInputs); err != nil {
+		// Update contact in database
+		data, _, err := client.From("contact").
+			Update(updateData, "", "").
+			Eq("id", match.ExistingContact.ID).
+			Execute()
+		if err != nil {
 			log.Error().
 				Err(err).
 				Str("contact_id", match.ExistingContact.ID).
-				Msg("Failed to create metadata entries")
-			return fmt.Errorf("failed to create metadata entries for contact %s: %w",
-				match.ExistingContact.ID, err)
+				Interface("update_data", updateData).
+				Str("response", string(data)).
+				Msg("Failed to update contact")
+			return fmt.Errorf("failed to update contact %s: %w", match.ExistingContact.ID, err)
 		}
+
+		log.Info().
+			Str("contact_id", match.ExistingContact.ID).
+			Int("fields_updated", len(updateData)).
+			Msg("Successfully updated contact fields")
 	}
 
-	log.Info().
-		Str("contact_id", match.ExistingContact.ID).
-		Str("contact_name", getStringValue(match.ExistingContact.Name)).
-		Int("fields_updated", len(updateData)-1). // Subtract 1 for updated_at
-		Msg("Successfully updated contact")
+	// 2. Handle Phone Record Updates
+	if err := handlePhoneUpdates(match, call_id, &metadataInputs); err != nil {
+		return fmt.Errorf("failed to handle phone updates: %w", err)
+	}
+
+	// 3. Create all metadata entries
+	if len(metadataInputs) > 0 {
+		if err := supabase.CreateAndStoreMetadata(metadataInputs); err != nil {
+			return fmt.Errorf("failed to create metadata entries: %w", err)
+		}
+	}
 
 	return nil
 }
 
-// Helper function to safely get string value from pointer
-func getStringValue(s *string) string {
-	if s == nil {
-		return ""
+// buildContactUpdateData determines which contact fields need to be updated
+func buildContactUpdateData(match contactMatch) map[string]interface{} {
+	updateData := make(map[string]interface{})
+
+	// Check each field for updates
+	if match.InferredContact.Name != "" &&
+		(match.ExistingContact.Name == nil || match.InferredContact.Name != *match.ExistingContact.Name) {
+		updateData["name"] = match.InferredContact.Name
 	}
-	return *s
+
+	if match.InferredContact.Title != nil &&
+		(match.ExistingContact.Title == nil || *match.InferredContact.Title != *match.ExistingContact.Title) {
+		updateData["title"] = *match.InferredContact.Title
+	}
+
+	if match.InferredContact.Department != nil &&
+		(match.ExistingContact.Department == nil || *match.InferredContact.Department != *match.ExistingContact.Department) {
+		updateData["department"] = *match.InferredContact.Department
+	}
+
+	if match.InferredContact.Email != nil &&
+		(match.ExistingContact.Email == nil || *match.InferredContact.Email != *match.ExistingContact.Email) {
+		updateData["email"] = *match.InferredContact.Email
+	}
+
+	return updateData
+}
+
+// buildContactMetadata creates metadata entries for contact field updates
+func buildContactMetadata(match contactMatch, call_id string, updateData map[string]interface{}) []supabase.MetadataInput {
+	var metadataInputs []supabase.MetadataInput
+
+	// Helper to safely get string value from pointer
+	getStringValue := func(s *string) string {
+		if s == nil {
+			return ""
+		}
+		return *s
+	}
+
+	// Create metadata for each updated field
+	for field, newValue := range updateData {
+		var oldValue string
+		switch field {
+		case "name":
+			oldValue = getStringValue(match.ExistingContact.Name)
+		case "title":
+			oldValue = getStringValue(match.ExistingContact.Title)
+		case "department":
+			oldValue = getStringValue(match.ExistingContact.Department)
+		case "email":
+			oldValue = getStringValue(match.ExistingContact.Email)
+		}
+
+		metadataInputs = append(metadataInputs, supabase.MetadataInput{
+			ResourceID:       match.ExistingContact.ID,
+			CallID:           call_id,
+			ResourceType:     "contact",
+			LastActionType:   "UPDATE",
+			FieldName:        field,
+			PreviousValue:    oldValue,
+			ReplacementValue: newValue.(string),
+		})
+	}
+
+	return metadataInputs
+}
+
+// handlePhoneUpdates manages phone record creation and updates
+func handlePhoneUpdates(match contactMatch, call_id string, metadataInputs *[]supabase.MetadataInput) error {
+	log := logger.Get()
+
+	client, err := supabase.InitSupabaseClient()
+	if err != nil {
+		return fmt.Errorf("failed to initialize Supabase client: %w", err)
+	}
+
+	// Case 1: Update existing phone record with new details
+	if match.UpdatePhone && match.ExistingPhone != nil && match.InferredContact.Phone != nil {
+		updateData := make(map[string]interface{})
+
+		// Update description if provided
+		if match.InferredContact.PhoneDescription != nil {
+			updateData["description"] = *match.InferredContact.PhoneDescription
+			*metadataInputs = append(*metadataInputs, supabase.MetadataInput{
+				ResourceID:       match.ExistingPhone.ID,
+				CallID:           call_id,
+				ResourceType:     "phone",
+				LastActionType:   "UPDATE",
+				FieldName:        "description",
+				PreviousValue:    getStringValue(match.ExistingPhone.Description),
+				ReplacementValue: *match.InferredContact.PhoneDescription,
+			})
+		}
+
+		// Update extension if provided
+		if match.InferredContact.PhoneExtension != nil {
+			floatVal := float64(*match.InferredContact.PhoneExtension)
+			updateData["extension"] = floatVal
+			*metadataInputs = append(*metadataInputs, supabase.MetadataInput{
+				ResourceID:       match.ExistingPhone.ID,
+				CallID:           call_id,
+				ResourceType:     "phone",
+				LastActionType:   "UPDATE",
+				FieldName:        "extension",
+				PreviousValue:    fmt.Sprintf("%v", match.ExistingPhone.Extension),
+				ReplacementValue: fmt.Sprintf("%d", *match.InferredContact.PhoneExtension),
+			})
+		}
+
+		if len(updateData) > 0 {
+			_, _, err := client.From("phone").
+				Update(updateData, "", "").
+				Eq("id", match.ExistingPhone.ID).
+				Execute()
+			if err != nil {
+				return fmt.Errorf("failed to update phone record: %w", err)
+			}
+
+			log.Info().
+				Str("phone_id", match.ExistingPhone.ID).
+				Int("fields_updated", len(updateData)).
+				Msg("Updated existing phone record")
+		}
+	}
+
+	// Case 2: Create new phone record
+	// This handles both NeedsNewPhone=true and shared_phone cases
+	if (match.NeedsNewPhone || match.MatchType == "shared_phone") &&
+		match.InferredContact.Phone != nil {
+
+		var extension *float64
+		if match.InferredContact.PhoneExtension != nil {
+			floatVal := float64(*match.InferredContact.PhoneExtension)
+			extension = &floatVal
+		}
+
+		// Create new phone record
+		phoneOpts := &hsds_types.PhoneOptions{
+			OrganizationID: match.ExistingContact.OrganizationID,
+			ContactID:      &match.ExistingContact.ID,
+			Extension:      extension,
+			Description:    match.InferredContact.PhoneDescription,
+		}
+
+		phone, err := hsds_types.NewPhone(*match.InferredContact.Phone, phoneOpts)
+		if err != nil {
+			return fmt.Errorf("failed to create new phone record: %w", err)
+		}
+
+		// Store the new phone record
+		data, _, err := client.From("phone").
+			Insert(phone, false, "", "representation", "").
+			Execute()
+		if err != nil {
+			return fmt.Errorf("failed to store new phone record: %w, data: %s", err, string(data))
+		}
+
+		// Create metadata for the new phone
+		createPhoneMetadata(phone, match.InferredContact, call_id, metadataInputs)
+
+		log.Info().
+			Str("contact_id", match.ExistingContact.ID).
+			Str("phone_id", phone.ID).
+			Str("match_type", match.MatchType).
+			Msg("Created new phone record")
+	}
+
+	return nil
+}
+
+// Helper function to create phone metadata
+func createPhoneMetadata(phone *hsds_types.Phone, inf contactInference, call_id string, metadataInputs *[]supabase.MetadataInput) {
+	*metadataInputs = append(*metadataInputs, supabase.MetadataInput{
+		ResourceID:       phone.ID,
+		CallID:           call_id,
+		ResourceType:     "phone",
+		LastActionType:   "CREATE",
+		FieldName:        "number",
+		PreviousValue:    "",
+		ReplacementValue: *inf.Phone,
+	})
+
+	if inf.PhoneExtension != nil {
+		*metadataInputs = append(*metadataInputs, supabase.MetadataInput{
+			ResourceID:       phone.ID,
+			CallID:           call_id,
+			ResourceType:     "phone",
+			LastActionType:   "CREATE",
+			FieldName:        "extension",
+			PreviousValue:    "",
+			ReplacementValue: strconv.Itoa(*inf.PhoneExtension),
+		})
+	}
+
+	if inf.PhoneDescription != nil {
+		*metadataInputs = append(*metadataInputs, supabase.MetadataInput{
+			ResourceID:       phone.ID,
+			CallID:           call_id,
+			ResourceType:     "phone",
+			LastActionType:   "CREATE",
+			FieldName:        "description",
+			PreviousValue:    "",
+			ReplacementValue: *inf.PhoneDescription,
+		})
+	}
 }

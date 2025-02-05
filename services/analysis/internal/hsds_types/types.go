@@ -3,9 +3,7 @@
 
 package hsds_types
 
-import (
-	"time"
-)
+import "time"
 
 // // -- HSDS Definitions -- ////
 type Organization struct {
@@ -134,7 +132,6 @@ type Service struct {
 	AssurerEmail           *string           `json:"assurer_email,omitempty" gorm:"type:text"`
 	Licenses               *string           `json:"licenses,omitempty" gorm:"type:text"` // Deprecated
 	Alert                  *string           `json:"alert,omitempty" gorm:"type:text"`
-	LastModified           *time.Time        `json:"last_modified,omitempty" gorm:"type:timestamp without time zone"`
 }
 
 type ServiceArea struct {

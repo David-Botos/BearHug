@@ -264,7 +264,6 @@ type ServiceOptions struct {
 	AssurerEmail           *string
 	Licenses               *string
 	Alert                  *string
-	LastModified           *time.Time
 }
 
 func NewService(organizationID, name string, status ServiceStatusEnum, opts *ServiceOptions) (*Service, error) {
@@ -309,7 +308,6 @@ func NewService(organizationID, name string, status ServiceStatusEnum, opts *Ser
 		service.AssurerEmail = opts.AssurerEmail
 		service.Licenses = opts.Licenses
 		service.Alert = opts.Alert
-		service.LastModified = opts.LastModified
 	}
 
 	return service, nil

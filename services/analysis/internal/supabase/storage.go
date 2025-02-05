@@ -144,7 +144,6 @@ func StoreNewServices(services []*hsds_types.Service, callID string) error {
 			"accreditations":          service.Accreditations,
 			"assured_date":            service.AssuredDate,
 			"assurer_email":           service.AssurerEmail,
-			"last_modified":           service.LastModified,
 		}
 
 		data, _, err := client.From("service").

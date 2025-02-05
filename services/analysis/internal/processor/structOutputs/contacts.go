@@ -3,7 +3,6 @@ package structOutputs
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/david-botos/BearHug/services/analysis/internal/hsds_types"
 	"github.com/david-botos/BearHug/services/analysis/internal/processor/inference"
@@ -11,58 +10,30 @@ import (
 	"github.com/david-botos/BearHug/services/analysis/pkg/logger"
 )
 
-func GenerateContactCategoryPrompt(transcript string, serviceCtx ServiceContext) (string, inference.ToolInputSchema, error) {
+func GenerateContactCategoryPrompt(transcript string) (string, inference.ToolInputSchema, error) {
 	log := logger.Get()
-	log.Debug().
-		Int("existing_services", len(serviceCtx.ExistingServices)).
-		Int("new_services", len(serviceCtx.NewServices)).
-		Msg("Generating service capacity prompt")
+	log.Debug().Msg("Generating service capacity prompt")
 
-	// Build service descriptions
-	var existingServiceDesc, newServiceDesc strings.Builder
+	prompt := fmt.Sprintf(`Extract contact information for community organization staff/representatives (not call center agents) from the following transcript. Follow these rules:
 
-	// Process existing services
-	for _, service := range serviceCtx.ExistingServices {
-		writeServiceDescription(&existingServiceDesc, *service)
-	}
-
-	// Process new services
-	for _, service := range serviceCtx.NewServices {
-		if service != nil {
-			writeServiceDescription(&newServiceDesc, *service)
-		}
-	}
-
-	prompt := fmt.Sprintf(`Extract contact information from the following transcript and map contacts to any services they are responsible for or associated with. Follow these rules:
-
-Contact Information Rules:
-1. Service Responsibility Mapping:
-   - Link contacts to any services they are mentioned as handling, managing, or being responsible for
-   - Use exact service names from either the "Existing Services" or "New Services" sections
-   - If a contact is mentioned without clear service associations, still include the contact
-
-2. Data Requirements:
-   - Include a contact entry if ANY of these are mentioned: name, email, or phone number
-   - Phone numbers must be formatted with country code (default to +1 for US)
-   - Extensions must be in integer format
-   - Service names must match exactly with one of those listed below if it is mentioned in the transcript that the contact is responsible for specific services.  Otherwise leave this field blank.
-   - Capture contextual information about phone numbers in the phoneDescription field, such as:
-  	* Whether it's a front desk, direct line, or general contact
-  	* Any specific guidance about when to use the number
- 	* Whether it's a personal or shared line
-
-Conversation Transcript:
-%s
-
-Current Service Information:
----------------------------
-Existing Services (reference these exact names when mapping contacts to services):
-%s
-
-New Services (reference these exact names when mapping contacts to services):
-%s
-
-IMPORTANT: Respond ONLY with the structured data output. Do not include any additional text, explanations, or notes.`, transcript, existingServiceDesc.String(), newServiceDesc.String())
+	Contact Information Rules:
+	1. Data Requirements:
+	   - Include a contact entry if ANY of these are mentioned: name, email, or phone number
+	   - Phone numbers must be formatted with country code (default to +1 for US)
+	   - Extensions must be in integer format
+	   - Capture contextual information about phone numbers in the phoneDescription field, such as:
+		  * Whether it's a front desk, direct line, or general contact
+		  * Any specific guidance about when to use the number
+		  * Whether it's a personal or shared line
+	
+	2. Scope:
+	   - Only extract contact information for staff/representatives of the community organizations
+	   - Do NOT create entries for call center agents or other 211 staff
+	
+	Conversation Transcript:
+	%s
+	
+	IMPORTANT: Respond ONLY with the structured data output. Do not include any additional text, explanations, or notes.`, transcript)
 
 	return prompt, ContactInformationSchema, nil
 }
@@ -103,14 +74,6 @@ var ContactInformationSchema = inference.ToolInputSchema{
 						"type":        "integer",
 						"description": "The contact's phone extension in integer format",
 					},
-					"responsibleServices": map[string]interface{}{
-						"type": "array",
-						"items": map[string]interface{}{
-							"type":        "string",
-							"description": "Name of a service this contact is responsible for, matching services mentioned in the provided context",
-						},
-						"description": "List of services this contact is responsible for managing or supporting",
-					},
 				},
 				"anyOf": []map[string]interface{}{
 					{
@@ -130,14 +93,13 @@ var ContactInformationSchema = inference.ToolInputSchema{
 }
 
 type contactInference struct {
-	Name                string   `json:"name"`
-	Title               *string  `json:"title,omitempty"`
-	Department          *string  `json:"department,omitempty"`
-	Email               *string  `json:"email,omitempty"`
-	Phone               *string  `json:"phone,omitempty"`
-	PhoneDescription    *string  `json:"phoneDescription,omitempty"`
-	PhoneExtension      *int     `json:"phoneExtension,omitempty"`
-	ResponsibleServices []string `json:"responsibleServices,omitempty"`
+	Name             string  `json:"name"`
+	Title            *string `json:"title,omitempty"`
+	Department       *string `json:"department,omitempty"`
+	Email            *string `json:"email,omitempty"`
+	Phone            *string `json:"phone,omitempty"`
+	PhoneDescription *string `json:"phoneDescription,omitempty"`
+	PhoneExtension   *int    `json:"phoneExtension,omitempty"`
 }
 
 type contactInfOutput struct {
@@ -192,20 +154,20 @@ func infToContactsAndPhones(inferenceResult map[string]interface{}, serviceCtx S
 	}
 
 	/* Step 2: Match observations to existing data */
-	matchResults := findMatches(mentionedContacts, orgContacts, relevantPhones, services)
+	matchResults := findMatches(mentionedContacts, orgContacts, relevantPhones)
 
 	/* Step 3: Process Updates */
 	for _, match := range matchResults.Matches {
 		err := UpdateExistingContact(match, call_id)
 		if err != nil {
-			return nil, nil, fmt.Errorf("Error when updating existing contact: %w", err)
+			return nil, nil, fmt.Errorf("error when updating existing contact: %w", err)
 		}
 	}
 
 	/* Step 4: Create new records for unmmatched mentions */
 	newContacts, newPhones, recordCreationErr := CreateNewContactAndPhoneRecords(matchResults.UnmatchedInf, org_id, call_id)
 	if recordCreationErr != nil {
-		return nil, nil, fmt.Errorf("Error when creating new records for unmmatched data: %w", err)
+		return nil, nil, fmt.Errorf("error when creating new records for unmmatched data: %w", err)
 	}
 
 	return newContacts, newPhones, nil
@@ -216,10 +178,10 @@ func analyzeContactCategoryDetails(transcript string, org_id string, serviceCtx 
 	log.Debug().Msg("Starting contact details analysis")
 
 	// Generate Prompt and Schema
-	prompt, schema, err := GenerateContactCategoryPrompt(transcript, serviceCtx)
+	prompt, schema, err := GenerateContactCategoryPrompt(transcript)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to generate service capacity prompt")
-		return DetailAnalysisResult{}, fmt.Errorf(`Failure when generating service capacity prompt: %w`, err)
+		return DetailAnalysisResult{}, fmt.Errorf(`failure when generating service capacity prompt: %w`, err)
 	}
 
 	// Declare Claude Inference Client
@@ -234,14 +196,14 @@ func analyzeContactCategoryDetails(transcript string, org_id string, serviceCtx 
 	unformmattedContactDetails, inferenceErr := client.RunClaudeInference(inference.PromptParams{Prompt: prompt, Schema: schema})
 	if inferenceErr != nil {
 		log.Error().Err(inferenceErr).Msg("Error during inference execution")
-		return DetailAnalysisResult{}, fmt.Errorf(`Error running inference to extract contact details: %w`, inferenceErr)
+		return DetailAnalysisResult{}, fmt.Errorf(`error running inference to extract contact details: %w`, inferenceErr)
 	}
 
 	log.Debug().Msg("Converting inference response to contact and phone objects")
 	contactDetails, phoneDetails, infConvErr := infToContactsAndPhones(unformmattedContactDetails, serviceCtx, org_id, call_id)
 	if infConvErr != nil {
 		log.Error().Err(infConvErr).Msg("Failed to convert inference response")
-		return DetailAnalysisResult{}, fmt.Errorf(`Error while converting the inference response to clean contact and phone objects: %w`, infConvErr)
+		return DetailAnalysisResult{}, fmt.Errorf(`error while converting the inference response to clean contact and phone objects: %w`, infConvErr)
 	}
 
 	var result DetailAnalysisResult = NewContactResult(contactDetails, phoneDetails)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/david-botos/BearHug/services/analysis/internal/hsds_types"
+	"github.com/david-botos/BearHug/services/analysis/pkg/logger"
 	"github.com/supabase-community/postgrest-go"
 )
 
@@ -136,6 +137,8 @@ func FetchUnits() ([]hsds_types.Unit, error) {
 }
 
 func FetchOrgContacts(org_id string) ([]hsds_types.Contact, error) {
+	log := logger.Get()
+	log.Info().Str("org_id", org_id).Msg("Fetching organization contacts")
 	client, initErr := InitSupabaseClient()
 	if initErr != nil {
 		return nil, fmt.Errorf("failed to initialize Supabase client: %w", initErr)
@@ -148,7 +151,7 @@ func FetchOrgContacts(org_id string) ([]hsds_types.Contact, error) {
 		ForeignTable: "",
 	}
 
-	data, _, err := client.From("contact").Select(`
+	data, count, err := client.From("contact").Select(`
 		id,
 		organization_id,
 		service_id,
@@ -157,11 +160,19 @@ func FetchOrgContacts(org_id string) ([]hsds_types.Contact, error) {
 		name,
 		title,
 		department,
-		email
+		email,
+		created_at,
+    	updated_at
 	`, "", false).Eq("organization_id", org_id).Order("name", order).Execute()
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch orgContacts from supa: %w", err)
 	}
+
+	log.Debug().
+		Str("org_id", org_id).
+		Int64("count", count).
+		Str("raw_data", string(data)).
+		Msg("Retrieved contacts data")
 
 	if err := json.Unmarshal(data, &contacts); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal orgContacts data: %w", err)
@@ -188,6 +199,8 @@ func FetchRelevantPhones(org_id string, contactIDs []string, serviceIDs []string
         extension,
         type,
         description,
+		created_at,
+    	updated_at
         `, "", false).Eq("organization_id", org_id).Execute()
 
 	if err != nil {
@@ -206,6 +219,8 @@ func FetchRelevantPhones(org_id string, contactIDs []string, serviceIDs []string
         extension,
         type,
         description,
+		created_at,
+    	updated_at
         `, "", false).In("contact_id", contactIDs).Execute()
 
 	if err != nil {
@@ -224,6 +239,8 @@ func FetchRelevantPhones(org_id string, contactIDs []string, serviceIDs []string
         extension,
         type,
         description,
+		created_at,
+    	updated_at
         `, "", false).In("service_id", serviceIDs).Execute()
 
 	if err != nil {

@@ -127,13 +127,11 @@ func writeErrorResponse(w http.ResponseWriter, statusCode int, errorCode, messag
 	log := logger.Get()
 
 	response := GenerateErrorResponse{
-		Status:  "error",
-		Message: "Failed to generate services prompt",
+		Status: "error",
 		Error: &ErrorDetail{
 			Code:    errorCode,
 			Message: message,
 		},
-		IsSchemaPresent: false,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

@@ -51,7 +51,7 @@ type DetailAnalysisResult struct {
 }
 
 // NewCapacityResult creates a new DetailAnalysisResult for capacity data
-func NewCapacityResult(capacities []*hsds_types.ServiceCapacity, units []*hsds_types.Unit) DetailAnalysisResult {
+func NewCapacityCategoryResult(capacities []*hsds_types.ServiceCapacity, units []*hsds_types.Unit) DetailAnalysisResult {
 	return DetailAnalysisResult{
 		Category: CapacityCategory,
 		CapacityData: &CapacityResult{
@@ -61,7 +61,7 @@ func NewCapacityResult(capacities []*hsds_types.ServiceCapacity, units []*hsds_t
 	}
 }
 
-func NewContactResult(contacts []*hsds_types.Contact, phones []*hsds_types.Phone) DetailAnalysisResult {
+func NewContactCategoryResult(contacts []*hsds_types.Contact, phones []*hsds_types.Phone) DetailAnalysisResult {
 	return DetailAnalysisResult{
 		Category: ContactCategory,
 		ContactData: &ContactResult{

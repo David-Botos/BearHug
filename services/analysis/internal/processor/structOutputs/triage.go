@@ -30,6 +30,7 @@ type TableDescription struct {
 }
 
 // Define descriptions for each table
+/*
 var tableDescriptions = []TableDescription{
 	{
 		Name:        ServiceCapacityTable,
@@ -47,19 +48,20 @@ var tableDescriptions = []TableDescription{
 		Name:        PhoneTable,
 		Description: "Stores phone numbers for follow-up or additional information",
 	},
-	// {
-	// 	Name:        ScheduleTable,
-	// 	Description: "Defines service timing including start/end times, duration, and frequency (daily/weekly/monthly)",
-	// },
-	// {
-	// 	Name:        ProgramTable,
-	// 	Description: "Groups related services under a common program (e.g., employment assistance program containing multiple related services)",
-	// },
-	// {
-	// 	Name:        RequiredDocumentTable,
-	// 	Description: "Lists required documentation for services (e.g., government ID)",
-	// },
+	{
+		Name:        ScheduleTable,
+		Description: "Defines service timing including start/end times, duration, and frequency (daily/weekly/monthly)",
+	},
+	{
+		Name:        ProgramTable,
+		Description: "Groups related services under a common program (e.g., employment assistance program containing multiple related services)",
+	},
+	{
+		Name:        RequiredDocumentTable,
+		Description: "Lists required documentation for services (e.g., government ID)",
+	},
 }
+*/
 
 // Define descriptions for each category
 var categoryDescriptions = []CategoryDescription{

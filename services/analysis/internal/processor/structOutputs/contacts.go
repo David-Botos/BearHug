@@ -154,7 +154,7 @@ func infToContactsAndPhones(inferenceResult map[string]interface{}, serviceCtx S
 	}
 
 	/* Step 2: Match observations to existing data */
-	matchResults := findMatches(mentionedContacts, orgContacts, relevantPhones)
+	matchResults := FindMatches(mentionedContacts, orgContacts, relevantPhones)
 
 	/* Step 3: Process Updates */
 	for _, match := range matchResults.Matches {
@@ -173,7 +173,7 @@ func infToContactsAndPhones(inferenceResult map[string]interface{}, serviceCtx S
 	return newContacts, newPhones, nil
 }
 
-func analyzeContactCategoryDetails(transcript string, org_id string, serviceCtx ServiceContext, call_id string) (DetailAnalysisResult, error) {
+func AnalyzeContactCategoryDetails(transcript string, org_id string, serviceCtx ServiceContext, call_id string) (DetailAnalysisResult, error) {
 	log := logger.Get()
 	log.Debug().Msg("Starting contact details analysis")
 
@@ -206,7 +206,7 @@ func analyzeContactCategoryDetails(transcript string, org_id string, serviceCtx 
 		return DetailAnalysisResult{}, fmt.Errorf(`error while converting the inference response to clean contact and phone objects: %w`, infConvErr)
 	}
 
-	var result DetailAnalysisResult = NewContactResult(contactDetails, phoneDetails)
+	var result DetailAnalysisResult = NewContactCategoryResult(contactDetails, phoneDetails)
 	log.Info().Int("contact_count", len(result.ContactData.Contacts)).Int("phone_count", len(result.ContactData.Phones)).Msg("Contact analysis completed successfully")
 	return result, nil
 }

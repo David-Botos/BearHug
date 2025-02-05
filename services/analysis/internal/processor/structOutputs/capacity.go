@@ -418,7 +418,7 @@ func calculateStringSimilarity(s1, s2 string) float64 {
 }
 
 // analyzeCapacityDetails processes service capacity and unit information
-func analyzeCapacityCategoryDetails(transcript string, serviceCtx ServiceContext) (DetailAnalysisResult, error) {
+func AnalyzeCapacityCategoryDetails(transcript string, serviceCtx ServiceContext) (DetailAnalysisResult, error) {
 	log := logger.Get()
 	log.Debug().Msg("Starting capacity details analysis")
 
@@ -451,7 +451,7 @@ func analyzeCapacityCategoryDetails(transcript string, serviceCtx ServiceContext
 		return DetailAnalysisResult{}, fmt.Errorf(`error while converting the inference response to clean capacity and unit objects: %w`, infConvErr)
 	}
 
-	var result DetailAnalysisResult = NewCapacityResult(capacityDetails, unitDetails)
+	var result DetailAnalysisResult = NewCapacityCategoryResult(capacityDetails, unitDetails)
 	log.Info().
 		Int("capacities_count", len(capacityDetails)).
 		Int("units_count", len(unitDetails)).

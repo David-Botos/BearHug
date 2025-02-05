@@ -3,7 +3,6 @@ package structOutputs
 import (
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/david-botos/BearHug/services/analysis/internal/hsds_types"
 	"github.com/david-botos/BearHug/services/analysis/internal/supabase"
@@ -296,10 +295,6 @@ func UpdateExistingContact(match contactMatch, call_id string) error {
 			Msg("No updates needed for contact")
 		return nil
 	}
-
-	// Update the UpdatedAt timestamp
-	now := time.Now()
-	updateData["updated_at"] = now
 
 	// Update the contact in Supabase
 	data, _, err := client.From("contact").

@@ -266,7 +266,6 @@ func HandleExtractedServices(extractedServices ServicesExtracted, organizationID
 				WaitTime:               service.WaitTime,
 				LastModified:           service.LastModified,
 				CreatedAt:              service.CreatedAt,
-				UpdatedAt:              service.UpdatedAt,
 			}
 			serviceContext.NewServices = append(serviceContext.NewServices, hsdsService)
 		}

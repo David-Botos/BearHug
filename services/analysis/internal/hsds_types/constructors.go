@@ -53,7 +53,6 @@ func NewOrganization(name, description string, opts *OrganizationOptions) (*Orga
 
 	org := &Organization{
 		CreatedAt:   now,
-		UpdatedAt:   now,
 		ID:          id,
 		Name:        name,
 		Description: description,
@@ -98,7 +97,6 @@ func NewOrganizationIdentifier(organizationID, identifierType, identifier string
 
 	orgIdentifier := &OrganizationIdentifier{
 		CreatedAt:      now,
-		UpdatedAt:      now,
 		ID:             id,
 		OrganizationID: organizationID,
 		IdentifierType: identifierType,
@@ -130,7 +128,6 @@ func NewURL(url string, opts *URLOptions) (*URL, error) {
 
 	urlObj := &URL{
 		CreatedAt: now,
-		UpdatedAt: now,
 		ID:        id,
 		URL:       url,
 	}
@@ -167,7 +164,6 @@ func NewFunding(opts *FundingOptions) (*Funding, error) {
 
 	funding := &Funding{
 		CreatedAt: now,
-		UpdatedAt: now,
 		ID:        id,
 	}
 
@@ -203,7 +199,6 @@ func NewUnit(name string, opts *UnitOptions) (*Unit, error) {
 
 	unit := &Unit{
 		CreatedAt: now,
-		UpdatedAt: now,
 		ID:        id,
 		Name:      name,
 	}
@@ -236,7 +231,6 @@ func NewProgram(organizationID, name, description string, opts *ProgramOptions) 
 
 	program := &Program{
 		CreatedAt:      now,
-		UpdatedAt:      now,
 		ID:             id,
 		OrganizationID: organizationID,
 		Name:           name,
@@ -287,7 +281,6 @@ func NewService(organizationID, name string, status ServiceStatusEnum, opts *Ser
 
 	service := &Service{
 		CreatedAt:      now,
-		UpdatedAt:      now,
 		ID:             id,
 		OrganizationID: organizationID,
 		Name:           name,
@@ -343,7 +336,6 @@ func NewServiceArea(opts *ServiceAreaOptions) (*ServiceArea, error) {
 
 	serviceArea := &ServiceArea{
 		CreatedAt: now,
-		UpdatedAt: now,
 		ID:        id,
 	}
 
@@ -388,7 +380,6 @@ func NewServiceAtLocation(serviceID, locationID string, opts *ServiceAtLocationO
 
 	serviceAtLocation := &ServiceAtLocation{
 		CreatedAt:  now,
-		UpdatedAt:  now,
 		ID:         id,
 		ServiceID:  serviceID,
 		LocationID: locationID,
@@ -425,7 +416,6 @@ func NewLocation(locationType LocationLocationTypeEnum, opts *LocationOptions) (
 
 	location := &Location{
 		CreatedAt:    now,
-		UpdatedAt:    now,
 		ID:           id,
 		LocationType: locationType,
 	}
@@ -475,7 +465,6 @@ func NewAddress(
 
 	address := &Address{
 		CreatedAt:     now,
-		UpdatedAt:     now,
 		ID:            id,
 		Address1:      address1,
 		City:          city,
@@ -515,7 +504,6 @@ func NewRequiredDocument(opts *RequiredDocumentOptions) (*RequiredDocument, erro
 
 	requiredDocument := &RequiredDocument{
 		CreatedAt: now,
-		UpdatedAt: now,
 		ID:        id,
 	}
 
@@ -551,7 +539,6 @@ func NewLanguage(opts *LanguageOptions) (*Language, error) {
 
 	language := &Language{
 		CreatedAt: now,
-		UpdatedAt: now,
 		ID:        id,
 	}
 
@@ -594,7 +581,6 @@ func NewAccessibility(opts *AccessibilityOptions) (*Accessibility, error) {
 
 	accessibility := &Accessibility{
 		CreatedAt: now,
-		UpdatedAt: now,
 		ID:        id,
 	}
 
@@ -632,7 +618,6 @@ func NewAttribute(taxonomyTermID, linkID, linkEntity string, opts *AttributeOpti
 
 	attribute := &Attribute{
 		CreatedAt:      now,
-		UpdatedAt:      now,
 		ID:             id,
 		TaxonomyTermID: taxonomyTermID,
 		LinkID:         linkID,
@@ -664,7 +649,6 @@ func NewTaxonomy(name, description string, opts *TaxonomyOptions) (*Taxonomy, er
 
 	taxonomy := &Taxonomy{
 		CreatedAt:   now,
-		UpdatedAt:   now,
 		ID:          id,
 		Name:        name,
 		Description: description,
@@ -698,7 +682,6 @@ func NewTaxonomyTerm(name, description string, opts *TaxonomyTermOptions) (*Taxo
 
 	taxonomyTerm := &TaxonomyTerm{
 		CreatedAt:   now,
-		UpdatedAt:   now,
 		ID:          id,
 		Name:        name,
 		Description: description,
@@ -744,7 +727,6 @@ func NewContact(opts *ContactOptions) (*Contact, error) {
 
 	contact := &Contact{
 		CreatedAt: now,
-		UpdatedAt: now,
 		ID:        id,
 	}
 
@@ -796,7 +778,6 @@ func NewPhone(number string, opts *PhoneOptions) (*Phone, error) {
 
 	phone := &Phone{
 		CreatedAt: now,
-		UpdatedAt: now,
 		ID:        id,
 		Number:    number,
 	}
@@ -866,7 +847,6 @@ func NewSchedule(opts *ScheduleOptions) (*Schedule, error) {
 
 	schedule := &Schedule{
 		CreatedAt: now,
-		UpdatedAt: now,
 		ID:        id,
 	}
 
@@ -930,12 +910,10 @@ func NewServiceCapacity(serviceID, unitID string, available float64, opts *Servi
 
 	serviceCapacity := &ServiceCapacity{
 		CreatedAt: now,
-		UpdatedAt: now,
 		ID:        id,
 		ServiceID: serviceID,
 		UnitID:    unitID,
 		Available: available,
-		Updated:   now,
 	}
 
 	if opts != nil {
@@ -970,7 +948,6 @@ func NewCostOption(serviceID string, opts *CostOptionOptions) (*CostOption, erro
 
 	costOption := &CostOption{
 		CreatedAt: now,
-		UpdatedAt: now,
 		ID:        id,
 		ServiceID: serviceID,
 	}
@@ -1017,7 +994,6 @@ func NewMetadata(
 
 	metadata := &Metadata{
 		CreatedAt:        now,
-		UpdatedAt:        now,
 		ID:               id,
 		CallID:           callId,
 		ResourceID:       resourceID,
@@ -1051,7 +1027,6 @@ func NewMetaTableDescription(opts *MetaTableDescriptionOptions) (*MetaTableDescr
 
 	metaTableDesc := &MetaTableDescription{
 		CreatedAt: now,
-		UpdatedAt: now,
 		ID:        id,
 	}
 
